@@ -89,3 +89,151 @@ model SubjectMatterExpert {
 
   @@map("subject_matter_experts")
 }
+
+// ===== DYNAMIC FORM SYSTEM MODELS =====
+
+model FormTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  version     String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sections    FormSection[]
+  submissions FormSubmission[]
+
+  @@map("form_templates")
+}
+
+model FormSection {
+  id           String   @id @default(cuid())
+  templateId   String
+  code         String   // e.g., "F0", "F1"
+  title        String   // e.g., "Header and identifiers"
+  description  String?
+  order        Int
+  isRequired   Boolean  @default(true)
+
+  template     FormTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  questions    FormQuestion[]
+
+  @@map("form_sections")
+}
+
+model FormQuestion {
+  id             String   @id @default(cuid())
+  sectionId      String
+  fieldCode      String   // e.g., "F0.1", "F1.2.a"
+  label          String
+  type           FieldType
+  helpText       String?
+  placeholder    String?
+  validation     Json?    // Validation rules
+  conditional    Json?    // Show/hide conditions
+  order          Int
+  isRequired     Boolean  @default(false)
+
+  section        FormSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  options        QuestionOption[]
+  scoringConfig  ScoringConfig?
+
+  @@map("form_questions")
+}
+
+enum FieldType {
+  SHORT_TEXT
+  LONG_TEXT
+  INTEGER
+  SINGLE_SELECT
+  MULTI_SELECT
+  CHECKBOX_GROUP
+  DATE
+  REPEATABLE_GROUP
+  SCORING_0_3
+}
+
+model QuestionOption {
+  id         String @id @default(cuid())
+  questionId String
+  value      String
+  label      String
+  order      Int
+
+  question   FormQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_options")
+}
+
+model ScoringConfig {
+  id         String @id @default(cuid())
+  questionId String @unique
+  minScore   Int    @default(0)
+  maxScore   Int    @default(3)
+  weight     Float  @default(1.0)
+  criteria   Json   // Scoring criteria for each value
+
+  question   FormQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("scoring_configs")
+}
+
+model FormSubmission {
+  id           String   @id @default(cuid())
+  templateId   String
+  status       SubmissionStatus @default(DRAFT)
+  submittedBy  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  submittedAt  DateTime?
+
+  template     FormTemplate @relation(fields: [templateId], references: [id])
+  responses    QuestionResponse[]
+  repeatGroups RepeatableGroupResponse[]
+  scores       CalculatedScore[]
+
+  @@map("form_submissions")
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  REVIEWED
+  ARCHIVED
+}
+
+model QuestionResponse {
+  id           String @id @default(cuid())
+  submissionId String
+  questionCode String
+  value        Json   // Flexible storage for any response type
+
+  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("question_responses")
+}
+
+model RepeatableGroupResponse {
+  id           String @id @default(cuid())
+  submissionId String
+  questionCode String
+  rowIndex     Int
+  data         Json   // Store row data as JSON
+
+  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("repeatable_group_responses")
+}
+
+model CalculatedScore {
+  id           String @id @default(cuid())
+  submissionId String
+  scoreType    String // e.g., "impact", "value", "market"
+  value        Float
+  calculatedAt DateTime @default(now())
+
+  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("calculated_scores")
+}

@@ -29,6 +29,7 @@ function formatScore(score: number | undefined): string {
   return validateScore(score).toFixed(SCORING_CONFIG.DECIMAL_PLACES);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ScoreRecommendationSection({ data, updateData }: ScoreRecommendationSectionProps) {
   const scores = calculateAllScores(data);
   const matrixPosition = getMatrixPosition(scores.impactScore, scores.valueScore);

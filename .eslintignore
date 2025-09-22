@@ -1,0 +1,2 @@
+# Ignore old test files that predate dynamic form implementation
+tests/score-recommendation-section/

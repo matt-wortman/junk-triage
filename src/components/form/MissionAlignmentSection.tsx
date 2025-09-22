@@ -21,7 +21,7 @@ export function MissionAlignmentSection({ data, updateData }: MissionAlignmentSe
       <div>
         <h3 className="text-lg font-semibold mb-4">Mission Alignment</h3>
         <p className="text-sm text-muted-foreground mb-6">
-          Evaluate how well this technology aligns with Cincinnati Children's mission
+          Evaluate how well this technology aligns with Cincinnati Children&rsquo;s mission
           and strategic goals. Consider child health impact, care delivery transformation,
           and alignment with POPT (Portfolio of the Future) goals.
         </p>

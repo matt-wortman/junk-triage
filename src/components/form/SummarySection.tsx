@@ -170,7 +170,7 @@ export function SummarySection({ data, updateData }: SummarySectionProps) {
             </Table>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No subject matter experts added yet. Click "Add SME" to get started.
+              No subject matter experts added yet. Click &ldquo;Add SME&rdquo; to get started.
             </div>
           )}
         </CardContent>

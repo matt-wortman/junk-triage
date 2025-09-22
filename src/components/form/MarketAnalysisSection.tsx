@@ -158,7 +158,7 @@ export function MarketAnalysisSection({ data, updateData }: MarketAnalysisSectio
             </Table>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No competitors added yet. Click "Add Competitor" to get started.
+              No competitors added yet. Click &ldquo;Add Competitor&rdquo; to get started.
             </div>
           )}
         </CardContent>
