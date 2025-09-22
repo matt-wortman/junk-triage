@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model TriageForm {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Header Section
+  reviewer           String
+  technologyId       String
+  inventorsTitle     String
+  domainAssetClass   String
+
+  // Technology Overview
+  technologyOverview String
+
+  // Mission Alignment (0-3 score)
+  missionAlignmentText  String
+  missionAlignmentScore Int    @default(0)
+
+  // Unmet Need (0-3 score)
+  unmetNeedText  String
+  unmetNeedScore Int    @default(0)
+
+  // State of the Art (0-3 score)
+  stateOfArtText  String
+  stateOfArtScore Int    @default(0)
+
+  // Market Analysis
+  marketOverview String
+  marketScore    Int @default(0) // Auto-calculated
+
+  // Digital/Software Considerations (4 yes/no questions)
+  digitalQuestion1 Boolean @default(false)
+  digitalQuestion2 Boolean @default(false)
+  digitalQuestion3 Boolean @default(false)
+  digitalQuestion4 Boolean @default(false)
+
+  // Calculated Scores
+  impactScore        Float @default(0) // Mission Alignment 50% + Unmet Need 50%
+  valueScore         Float @default(0) // State of Art 50% + Market 50%
+  recommendation     String @default("") // "Proceed" or "Alternative Pathway"
+  recommendationText String @default("")
+
+  // Status
+  status String @default("draft") // draft, submitted, reviewed
+
+  // Related tables
+  competitors Competitor[]
+  experts     SubjectMatterExpert[]
+
+  @@map("triage_forms")
+}
+
+model Competitor {
+  id                String     @id @default(cuid())
+  triageFormId      String
+  company           String
+  productDescription String
+  productRevenue    String?
+  pointOfContact    String?
+
+  triageForm TriageForm @relation(fields: [triageFormId], references: [id], onDelete: Cascade)
+
+  @@map("competitors")
+}
+
+model SubjectMatterExpert {
+  id              String     @id @default(cuid())
+  triageFormId    String
+  name            String
+  title           String?
+  organization    String?
+  contactInfo     String?
+  expertise       String?
+  recommendation  String?
+
+  triageForm TriageForm @relation(fields: [triageFormId], references: [id], onDelete: Cascade)
+
+  @@map("subject_matter_experts")
+}
