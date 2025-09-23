@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { FormEngineProvider, DynamicFormRenderer } from '@/lib/form-engine/renderer';
 import { DynamicFormNavigation } from '@/components/form/DynamicFormNavigation';
 import { FormTemplateWithSections } from '@/lib/form-engine/types';
+import { submitFormResponse, saveDraftResponse } from './actions';
+import { toast } from 'sonner';
 
 export default function DynamicFormPage() {
   const [template, setTemplate] = useState<FormTemplateWithSections | null>(null);
@@ -36,33 +38,29 @@ export default function DynamicFormPage() {
     console.log('Form submitted:', data);
 
     try {
-      const response = await fetch('/api/form-submissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          templateId: template?.id,
-          submittedBy: 'current_user', // TODO: Get from auth
-          status: 'SUBMITTED',
-          responses: data.responses,
-          repeatGroups: data.repeatGroups,
-          calculatedScores: data.calculatedScores,
-        }),
-      });
+      if (!template?.id) {
+        toast.error('No form template found');
+        return;
+      }
 
-      const result = await response.json();
+      const result = await submitFormResponse({
+        templateId: template.id,
+        responses: data.responses,
+        repeatGroups: data.repeatGroups,
+        calculatedScores: data.calculatedScores,
+      });
 
       if (result.success) {
         console.log('✅ Form submitted successfully:', result.submissionId);
-        // TODO: Show success message and redirect
+        toast.success('Form submitted successfully!');
+        // TODO: Redirect to success page or drafts list
       } else {
         console.error('❌ Form submission failed:', result.error);
-        // TODO: Show error message
+        toast.error(result.error || 'Failed to submit form');
       }
     } catch (error) {
       console.error('❌ Form submission error:', error);
-      // TODO: Show error message
+      toast.error('An unexpected error occurred while submitting the form');
     }
   };
 
@@ -70,33 +68,28 @@ export default function DynamicFormPage() {
     console.log('Draft saved:', data);
 
     try {
-      const response = await fetch('/api/form-submissions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          templateId: template?.id,
-          submittedBy: 'current_user', // TODO: Get from auth
-          status: 'DRAFT',
-          responses: data.responses,
-          repeatGroups: data.repeatGroups,
-          calculatedScores: data.calculatedScores,
-        }),
-      });
+      if (!template?.id) {
+        toast.error('No form template found');
+        return;
+      }
 
-      const result = await response.json();
+      const result = await saveDraftResponse({
+        templateId: template.id,
+        responses: data.responses,
+        repeatGroups: data.repeatGroups,
+        calculatedScores: data.calculatedScores,
+      });
 
       if (result.success) {
         console.log('✅ Draft saved successfully:', result.submissionId);
-        // TODO: Show success message
+        toast.success('Draft saved successfully!');
       } else {
         console.error('❌ Draft save failed:', result.error);
-        // TODO: Show error message
+        toast.error(result.error || 'Failed to save draft');
       }
     } catch (error) {
       console.error('❌ Draft save error:', error);
-      // TODO: Show error message
+      toast.error('An unexpected error occurred while saving draft');
     }
   };
 
@@ -178,14 +171,15 @@ export default function DynamicFormPage() {
           onSubmit={handleSubmit}
           onSaveDraft={handleSaveDraft}
         >
-          <Card className="mb-8">
-            <CardContent className="p-6">
-              <DynamicFormRenderer />
-            </CardContent>
-          </Card>
+          <div className="space-y-8">
+            <DynamicFormRenderer />
 
-          {/* Dynamic Navigation */}
-          <DynamicFormNavigation />
+            {/* Dynamic Navigation */}
+            <DynamicFormNavigation
+              onSubmit={handleSubmit}
+              onSaveDraft={handleSaveDraft}
+            />
+          </div>
         </FormEngineProvider>
       </div>
     </div>

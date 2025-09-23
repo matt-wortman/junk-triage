@@ -227,11 +227,23 @@ export const completeFormStructure = {
           isRequired: true,
         },
         {
+          fieldCode: "F2.1.info",
+          label: "🎯 Key Alignment Areas:",
+          type: FieldType.SHORT_TEXT,
+          helpText: "• **Improves Child Health:** Direct impact on pediatric health outcomes\n• **Transforms Delivery of Care:** Changes how care is provided or accessed\n• **POPT Goals:** Aligns with Portfolio of the Future strategic objectives",
+          order: 2,
+          isRequired: false,
+          validation: {
+            isInfoBox: true,
+            infoBoxStyle: "blue"
+          }
+        },
+        {
           fieldCode: "F2.1.score",
           label: "Mission Alignment Score",
           type: FieldType.SCORING_0_3,
           helpText: "0 = not aligned, 1 = aligns with one dimension, 2 = aligns with two, 3 = aligns with all",
-          order: 2,
+          order: 3,
           isRequired: true,
           scoringConfig: {
             minScore: 0,
@@ -251,7 +263,7 @@ export const completeFormStructure = {
           type: FieldType.LONG_TEXT,
           helpText: "What need does this technology address and what impact could it have?",
           placeholder: "Describe the unmet need and potential impact...",
-          order: 3,
+          order: 4,
           isRequired: true,
         },
         {
@@ -260,7 +272,7 @@ export const completeFormStructure = {
           type: FieldType.LONG_TEXT,
           helpText: "How will this diagnostic improve clinical decision-making?",
           placeholder: "Describe clinical utility for diagnostics...",
-          order: 4,
+          order: 5,
           isRequired: false,
           conditional: {
             showIf: [
@@ -273,7 +285,7 @@ export const completeFormStructure = {
           label: "Unmet Need Score",
           type: FieldType.SCORING_0_3,
           helpText: "Use late-stage competitor count and differentiation to anchor the score",
-          order: 5,
+          order: 6,
           isRequired: true,
           scoringConfig: {
             minScore: 0,

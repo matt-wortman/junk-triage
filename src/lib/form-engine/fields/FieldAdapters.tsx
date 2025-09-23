@@ -4,12 +4,71 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScoringComponent } from '@/components/form/ScoringComponent';
 import { DynamicScoringMatrix } from '@/components/form/DynamicScoringMatrix';
 import { FieldProps } from '../types';
+import { Trash2, Plus } from 'lucide-react';
 
 // Short text field adapter
 export const ShortTextField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+  console.log('SHORT TEXT FIELD DEBUG:', {
+    fieldCode: question.fieldCode,
+    validation: question.validation,
+    validationType: typeof question.validation
+  });
+
+  // Check if this is an info box
+  let validationObj = question.validation;
+
+  // Parse validation if it's a string (same logic as renderer)
+  if (typeof question.validation === 'string') {
+    try {
+      validationObj = JSON.parse(question.validation);
+      console.log('PARSED VALIDATION:', validationObj);
+    } catch (e) {
+      validationObj = {};
+      console.log('FAILED TO PARSE VALIDATION:', e);
+    }
+  }
+
+  const isInfoBox = validationObj &&
+    typeof validationObj === 'object' &&
+    'isInfoBox' in validationObj &&
+    validationObj.isInfoBox;
+
+  console.log('INFO BOX CHECK:', {
+    isInfoBox,
+    validationObj,
+    fieldCode: question.fieldCode
+  });
+
+  if (isInfoBox) {
+    console.log('INFO BOX DETECTED! Rendering hardcoded list.');
+    const infoBoxStyle = validationObj.infoBoxStyle || 'blue';
+    const styleClasses = infoBoxStyle === 'blue'
+      ? 'bg-blue-50 border-blue-200 text-blue-800'
+      : 'bg-gray-50 border-gray-200 text-gray-800';
+
+    return (
+      <div className={`border rounded-lg p-4 ${styleClasses}`}>
+        <h4 className="text-sm font-medium mb-2">{question.label}</h4>
+        <ul className="text-sm space-y-1">
+          <li>
+            • <strong>Improves Child Health:</strong> Direct impact on pediatric health outcomes
+          </li>
+          <li>
+            • <strong>Transforms Delivery of Care:</strong> Changes how care is provided or accessed
+          </li>
+          <li>
+            • <strong>POPT Goals:</strong> Aligns with Portfolio of the Future strategic objectives
+          </li>
+        </ul>
+      </div>
+    );
+  }
+
   return (
     <Input
       value={value as string || ''}
@@ -232,26 +291,24 @@ export const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, on
   return (
     <div className={`space-y-4 ${error ? 'border border-red-500 rounded-lg p-4' : ''}`}>
       {rows.length > 0 && (
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
                 {fieldConfig.map((field) => (
-                  <th key={field.key} className="px-4 py-3 text-left text-sm font-medium text-gray-900">
+                  <TableHead key={field.key}>
                     {field.label}
                     {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </th>
+                  </TableHead>
                 ))}
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-900 w-16">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {rows.map((row, index) => (
-                <tr key={index} className="hover:bg-gray-50">
+                <TableRow key={index}>
                   {fieldConfig.map((field) => (
-                    <td key={field.key} className="px-4 py-3">
+                    <TableCell key={field.key}>
                       {field.type === 'textarea' ? (
                         <Textarea
                           value={String(row[field.key] || '')}
@@ -269,37 +326,40 @@ export const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, on
                           disabled={disabled}
                         />
                       )}
-                    </td>
+                    </TableCell>
                   ))}
-                  <td className="px-4 py-3">
-                    <button
+                  <TableCell>
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => removeRow(index)}
                       disabled={disabled}
-                      className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Remove row"
+                      className="h-8 w-8 p-0"
                     >
-                      ✕
-                    </button>
-                  </td>
-                </tr>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={addRow}
         disabled={disabled}
-        className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full"
       >
-        + Add {fieldConfig.length > 1 ? 'Row' : 'Item'}
-      </button>
+        <Plus className="mr-2 h-4 w-4" />
+        Add {fieldConfig.length > 1 ? 'Row' : 'Item'}
+      </Button>
 
       {rows.length === 0 && (
-        <p className="text-sm text-gray-500 italic">
+        <p className="text-sm text-muted-foreground text-center py-6">
           No entries yet. Click "Add {fieldConfig.length > 1 ? 'Row' : 'Item'}" to get started.
         </p>
       )}

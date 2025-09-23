@@ -1,11 +1,13 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { ChevronLeft, ChevronRight, Save, Send } from 'lucide-react';
 import { useFormEngine } from '@/lib/form-engine/renderer';
 
 interface DynamicFormNavigationProps {
-  onSaveDraft?: () => void;
-  onSubmit?: () => void;
+  onSaveDraft?: (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => void;
+  onSubmit?: (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => void;
 }
 
 export function DynamicFormNavigation({ onSaveDraft, onSubmit }: DynamicFormNavigationProps) {
@@ -47,7 +49,7 @@ export function DynamicFormNavigation({ onSaveDraft, onSubmit }: DynamicFormNavi
 
     if (onSaveDraft) {
       console.log('💾 Saving draft with data:', formData);
-      onSaveDraft();
+      onSaveDraft(formData);
     } else {
       saveDraft();
     }
@@ -62,66 +64,73 @@ export function DynamicFormNavigation({ onSaveDraft, onSubmit }: DynamicFormNavi
 
     if (onSubmit) {
       console.log('📝 Submitting form with data:', formData);
-      onSubmit();
+      onSubmit(formData);
     } else {
       submitForm();
     }
   };
 
+  const progressValue = ((currentSection + 1) / totalSections) * 100;
+
   return (
-    <div className="flex justify-between items-center">
-      {/* Previous button */}
-      <Button
-        variant="outline"
-        onClick={handlePrevious}
-        disabled={isFirstSection}
-      >
-        <ChevronLeft className="h-4 w-4 mr-2" />
-        Previous
-      </Button>
+    <Card>
+      <CardContent className="pt-6">
+        <div className="space-y-4">
+          {/* Progress indicator */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                Section {currentSection + 1} of {totalSections}
+              </span>
+              <span className="text-muted-foreground">
+                {Math.round(progressValue)}% Complete
+              </span>
+            </div>
+            <Progress value={progressValue} className="w-full" />
+          </div>
 
-      {/* Section indicator */}
-      <div className="flex items-center space-x-4">
-        <span className="text-sm text-muted-foreground">
-          Section {currentSection + 1} of {totalSections}
-        </span>
+          {/* Navigation buttons */}
+          <div className="flex justify-between items-center">
+            {/* Previous button */}
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={isFirstSection}
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
 
-        {/* Progress bar */}
-        <div className="w-48 bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-primary h-2 rounded-full transition-all duration-300"
-            style={{ width: `${((currentSection + 1) / totalSections) * 100}%` }}
-          />
+            {/* Action buttons */}
+            <div className="flex space-x-2">
+              {/* Next/Save Draft/Submit based on section */}
+              {!isLastSection ? (
+                <>
+                  <Button variant="outline" onClick={handleSaveDraft}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Draft
+                  </Button>
+                  <Button onClick={handleNext}>
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={handleSaveDraft}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Draft
+                  </Button>
+                  <Button onClick={handleSubmit}>
+                    <Send className="h-4 w-4 mr-2" />
+                    Submit Form
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex space-x-2">
-        {/* Next/Save Draft/Submit based on section */}
-        {!isLastSection ? (
-          <>
-            <Button variant="outline" onClick={handleSaveDraft}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Draft
-            </Button>
-            <Button onClick={handleNext}>
-              Next
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="outline" onClick={handleSaveDraft}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Draft
-            </Button>
-            <Button onClick={handleSubmit}>
-              <Send className="h-4 w-4 mr-2" />
-              Submit Form
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

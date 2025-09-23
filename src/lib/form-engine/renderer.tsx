@@ -15,6 +15,8 @@ import { getDefaultValue } from './field-mappings-simple';
 import { FieldComponents } from './fields/FieldAdapters';
 import { validateField } from '../validation/form-schemas';
 import { extractScoringInputs, calculateAllScores } from '../scoring/calculations';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
 // Form state reducer
 function formReducer(state: FormState, action: FormAction): FormState {
@@ -276,6 +278,37 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
     return null;
   }
 
+  // Check if this is an info box
+  let validationObj = question.validation;
+
+  // Parse validation if it's a string
+  if (typeof question.validation === 'string') {
+    try {
+      validationObj = JSON.parse(question.validation);
+    } catch (e) {
+      validationObj = {};
+    }
+  }
+
+  const isInfoBox = validationObj &&
+    typeof validationObj === 'object' &&
+    'isInfoBox' in validationObj &&
+    validationObj.isInfoBox;
+
+  // Debug logging for Key Alignment Areas
+  if (question.fieldCode === 'F2.1.info') {
+    console.log('KEY ALIGNMENT DEBUG:', {
+      fieldCode: question.fieldCode,
+      label: question.label,
+      validation: question.validation,
+      isInfoBox: isInfoBox,
+      type: question.type,
+      conditional: question.conditional,
+      conditionalConfig: conditionalConfig,
+      isVisible: isVisible
+    });
+  }
+
   // Check if question should be required
   const isRequired = shouldRequireField(conditionalConfig, question.isRequired, responses);
 
@@ -319,46 +352,70 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
     }
   };
 
-  return (
-    <div className={`space-y-2 ${className}`}>
-      <div className="space-y-1">
-        <label htmlFor={question.fieldCode} className="text-sm font-medium">
-          {question.label}
-          {isRequired && <span className="text-red-500 ml-1">*</span>}
-        </label>
-        {question.helpText && (
-          <p className="text-sm text-gray-600">{question.helpText}</p>
-        )}
+  // For info boxes, render without Card wrapper
+  if (isInfoBox) {
+    const FieldComponent = FieldComponents[question.type];
+    if (!FieldComponent) {
+      return null;
+    }
+
+    return (
+      <div className={className}>
+        <FieldComponent
+          question={question}
+          value={value as string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]}
+          onChange={handleChange}
+          error={errors[question.fieldCode]}
+          disabled={false}
+        />
       </div>
+    );
+  }
 
-      {/* Dynamic field rendering using adapters */}
-      {(() => {
-        const FieldComponent = FieldComponents[question.type];
-        if (!FieldComponent) {
-          return (
-            <div className="p-4 border rounded bg-red-50">
-              <p className="text-sm text-red-600">
-                Unsupported field type: {question.type}
-              </p>
-            </div>
-          );
-        }
+  return (
+    <Card className={className}>
+      <CardContent className="pt-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor={question.fieldCode}>
+              {question.label}
+              {isRequired && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            {question.helpText && (
+              <p className="text-sm text-muted-foreground">{question.helpText}</p>
+            )}
+          </div>
 
-        return (
-          <FieldComponent
-            question={question}
-            value={value as string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]}
-            onChange={handleChange}
-            error={errors[question.fieldCode]}
-            disabled={false}
-          />
-        );
-      })()}
+          {/* Dynamic field rendering using adapters */}
+          {(() => {
+            const FieldComponent = FieldComponents[question.type];
+            if (!FieldComponent) {
+              return (
+                <div className="p-4 border rounded bg-red-50">
+                  <p className="text-sm text-red-600">
+                    Unsupported field type: {question.type}
+                  </p>
+                </div>
+              );
+            }
 
-      {errors[question.fieldCode] && (
-        <p className="text-sm text-red-500">{errors[question.fieldCode]}</p>
-      )}
-    </div>
+            return (
+              <FieldComponent
+                question={question}
+                value={value as string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]}
+                onChange={handleChange}
+                error={errors[question.fieldCode]}
+                disabled={false}
+              />
+            );
+          })()}
+
+          {errors[question.fieldCode] && (
+            <p className="text-sm text-red-500">{errors[question.fieldCode]}</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -370,26 +427,27 @@ interface DynamicSectionProps {
 
 function DynamicSection({ section, className = '' }: DynamicSectionProps) {
   return (
-    <div className={`space-y-6 ${className}`}>
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold">{section.title}</h2>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="text-xl">{section.title}</CardTitle>
         {section.description && (
-          <p className="text-gray-600">{section.description}</p>
+          <p className="text-sm text-muted-foreground">{section.description}</p>
         )}
-      </div>
-
-      <div className="space-y-4">
-        {section.questions
-          .sort((a, b) => a.order - b.order)
-          .map((question) => (
-            <DynamicQuestion
-              key={question.id}
-              question={question}
-              className="p-4 border rounded-lg"
-            />
-          ))}
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {section.questions
+            .sort((a, b) => a.order - b.order)
+            .map((question) => (
+              <DynamicQuestion
+                key={question.id}
+                question={question}
+                className=""
+              />
+            ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
