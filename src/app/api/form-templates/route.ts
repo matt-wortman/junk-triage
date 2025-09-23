@@ -58,18 +58,19 @@ export async function GET() {
 
     return NextResponse.json(template);
   } catch (error) {
+    const err = error as Error & { code?: string };
     console.error('❌ API: Detailed error loading form template:');
-    console.error('Error name:', error?.name);
-    console.error('Error message:', error?.message);
-    console.error('Error stack:', error?.stack);
+    console.error('Error name:', err.name);
+    console.error('Error message:', err.message);
+    console.error('Error stack:', err.stack);
 
-    if (error?.code) {
-      console.error('Error code:', error.code);
+    if (err.code) {
+      console.error('Error code:', err.code);
     }
 
     return NextResponse.json({
       error: 'Failed to load form template',
-      details: error?.message || 'Unknown error'
+      details: err.message || 'Unknown error'
     }, { status: 500 });
   }
 }

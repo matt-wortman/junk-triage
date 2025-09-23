@@ -34,7 +34,7 @@ export interface FormSubmissionData {
 // Conditional logic types
 export interface ConditionalRule {
   field: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'exists' | 'not_exists';
+  operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'exists' | 'not_exists' | 'not_empty';
   value: string | number | boolean | null;
   action: 'show' | 'hide' | 'require' | 'optional';
 }
@@ -58,8 +58,8 @@ export interface ValidationConfig {
 // Field rendering types
 export interface FieldProps {
   question: FormQuestionWithDetails;
-  value: string | number | boolean | string[] | Record<string, unknown>;
-  onChange: (value: string | number | boolean | string[] | Record<string, unknown>) => void;
+  value: string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[];
+  onChange: (value: string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]) => void;
   error?: string;
   disabled?: boolean;
 }
@@ -84,6 +84,7 @@ export interface FormContext {
   errors: { [fieldCode: string]: string };
   setResponse: (fieldCode: string, value: string | number | boolean | string[] | Record<string, unknown>) => void;
   setRepeatGroupData: (fieldCode: string, data: Record<string, unknown>[]) => void;
+  setError: (fieldCode: string, error: string) => void;
   nextSection: () => void;
   previousSection: () => void;
   submitForm: () => Promise<void>;

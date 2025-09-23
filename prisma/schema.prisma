@@ -152,6 +152,7 @@ enum FieldType {
   DATE
   REPEATABLE_GROUP
   SCORING_0_3
+  SCORING_MATRIX
 }
 
 model QuestionOption {

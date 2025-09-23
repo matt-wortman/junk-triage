@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Save, Send } from 'lucide-react';
 import Link from 'next/link';
 import { FormEngineProvider, DynamicFormRenderer } from '@/lib/form-engine/renderer';
 import { DynamicFormNavigation } from '@/components/form/DynamicFormNavigation';
@@ -35,12 +34,70 @@ export default function DynamicFormPage() {
 
   const handleSubmit = async (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => {
     console.log('Form submitted:', data);
-    // TODO: Implement form submission
+
+    try {
+      const response = await fetch('/api/form-submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateId: template?.id,
+          submittedBy: 'current_user', // TODO: Get from auth
+          status: 'SUBMITTED',
+          responses: data.responses,
+          repeatGroups: data.repeatGroups,
+          calculatedScores: data.calculatedScores,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('✅ Form submitted successfully:', result.submissionId);
+        // TODO: Show success message and redirect
+      } else {
+        console.error('❌ Form submission failed:', result.error);
+        // TODO: Show error message
+      }
+    } catch (error) {
+      console.error('❌ Form submission error:', error);
+      // TODO: Show error message
+    }
   };
 
   const handleSaveDraft = async (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => {
     console.log('Draft saved:', data);
-    // TODO: Implement draft saving
+
+    try {
+      const response = await fetch('/api/form-submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateId: template?.id,
+          submittedBy: 'current_user', // TODO: Get from auth
+          status: 'DRAFT',
+          responses: data.responses,
+          repeatGroups: data.repeatGroups,
+          calculatedScores: data.calculatedScores,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('✅ Draft saved successfully:', result.submissionId);
+        // TODO: Show success message
+      } else {
+        console.error('❌ Draft save failed:', result.error);
+        // TODO: Show error message
+      }
+    } catch (error) {
+      console.error('❌ Draft save error:', error);
+      // TODO: Show error message
+    }
   };
 
   if (loading) {

@@ -38,6 +38,12 @@ export function evaluateRule(rule: ConditionalRule, responses: FormResponse): bo
     case 'not_exists':
       return fieldValue === undefined || fieldValue === null || fieldValue === '';
 
+    case 'not_empty':
+      if (Array.isArray(fieldValue)) {
+        return fieldValue.length > 0;
+      }
+      return fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
+
     default:
       console.warn(`Unknown conditional operator: ${rule.operator}`);
       return false;
@@ -181,14 +187,37 @@ export function parseConditionalConfig(conditionalJson: unknown): ConditionalCon
   try {
     if (!conditionalJson) return null;
 
+    let config: any;
+
     // If it's already parsed
-    if (typeof conditionalJson === 'object' && conditionalJson !== null && 'rules' in conditionalJson) {
-      return conditionalJson as ConditionalConfig;
+    if (typeof conditionalJson === 'object' && conditionalJson !== null) {
+      config = conditionalJson;
+    }
+    // If it's a JSON string
+    else if (typeof conditionalJson === 'string') {
+      config = JSON.parse(conditionalJson);
+    } else {
+      return null;
     }
 
-    // If it's a JSON string
-    if (typeof conditionalJson === 'string') {
-      return JSON.parse(conditionalJson) as ConditionalConfig;
+    // Handle simplified format from seed data: { showIf: [...] }
+    if (config.showIf && Array.isArray(config.showIf)) {
+      const rules: ConditionalRule[] = config.showIf.map((condition: any) => ({
+        field: condition.field,
+        operator: condition.operator,
+        value: condition.value,
+        action: 'show'
+      }));
+
+      return {
+        rules,
+        logic: 'OR' // Default to OR for show conditions
+      };
+    }
+
+    // Handle full format: { rules: [...], logic: "AND|OR" }
+    if (config.rules && Array.isArray(config.rules)) {
+      return config as ConditionalConfig;
     }
 
     return null;

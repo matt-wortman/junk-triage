@@ -8,6 +8,19 @@ This is a web application project to replicate the Cincinnati Children's Hospita
 
 ## 🎯 PRIMARY GOAL - DYNAMIC DATABASE-DRIVEN FORMS
 
+## ⚠️ IMPORTANT: DEVELOPMENT FOCUS
+
+### Static Form is DESIGN REFERENCE ONLY
+- The `/form` route (static hardcoded form) is **FROZEN** - no further development or analysis
+- Use it ONLY as a visual design reference for UI/UX consistency
+- All development, planning, and analysis must focus on `/dynamic-form` route
+- When creating new features, copy the visual design from `/form` but implement in dynamic system
+
+### Active Development Target
+- **ONLY `/dynamic-form`** route is for active development
+- All planning, analysis, and next steps should focus on dynamic forms
+- No time should be spent on static form improvements or fixes
+
 ### Core Requirements (MUST FOLLOW)
 1. **ALL form structure must come from the database** - questions, sections, text, labels, help text, options, etc.
 2. **ALL responses must be stored in the database** - every answer, score, and user input
@@ -23,14 +36,15 @@ This is a web application project to replicate the Cincinnati Children's Hospita
 - **Flexibility**: Adding a new question = database insert, NOT code change
 
 ### Current Status
-- ✅ **Hardcoded form** - Fully functional with beautiful UI (reference implementation)
-- ✅ **Dynamic form engine** - Foundation built (types, schema, context, validation)
-- 🔧 **Missing connection** - Need to wire dynamic engine to use same UI components as hardcoded form
+- ✅ **Static form (`/form`)** - DESIGN REFERENCE ONLY - Frozen, no further development
+- ✅ **Dynamic form engine (`/dynamic-form`)** - Foundation built (types, schema, context, validation)
+- 🔧 **Missing connection** - Need to wire dynamic engine to use same UI components as static reference
 
 ### The Plan
-1. **Keep the visual design** - Reuse all the shadcn/ui components from hardcoded form
+1. **Extract visual design** - Copy shadcn/ui components and styling from static form as reference
 2. **Make it dynamic** - Components render based on database data, not hardcoded JSX
 3. **Maintain quality** - Same professional look, same user experience, but database-driven
+4. **Static form remains untouched** - Only used as visual reference, no modifications
 
 ## Form Structure
 
@@ -137,7 +151,9 @@ The project includes shadcn MCP server configuration in `.mcp.json` for easy com
    - ✅ Local Prisma database server running
    - ✅ Prisma client utility created (`src/lib/prisma.ts`)
 
-### ✅ COMPLETED PHASE 2: Complete Form Implementation
+### ✅ COMPLETED PHASE 2: Static Form Implementation (DESIGN REFERENCE ONLY)
+
+**NOTE: This phase is FROZEN - no further development. Use only as visual design reference for dynamic forms.**
 
 1. **Multi-Step Form Architecture**
    - ✅ 9-step form navigation with progress tracking
@@ -211,23 +227,26 @@ The form is now **fully functional** with all core features implemented:
 src/
 ├── app/
 │   ├── page.tsx                    # Landing page (✅ completed)
-│   ├── form/
-│   │   └── page.tsx               # Multi-step triage form (✅ completed)
+│   ├── form/                       # 🚫 DESIGN REFERENCE ONLY - NO CHANGES
+│   │   └── page.tsx               # Static form - FROZEN for visual reference
+│   ├── dynamic-form/              # 🎯 ACTIVE DEVELOPMENT TARGET
+│   │   └── page.tsx               # Dynamic form implementation
 │   └── globals.css                # Global styles with design tokens
 ├── components/
-│   ├── form/                      # Form section components (✅ all completed)
-│   │   ├── HeaderSection.tsx
+│   ├── form/                      # 🚫 DESIGN REFERENCE ONLY - Form components (FROZEN)
+│   │   ├── HeaderSection.tsx      # Use as visual reference for dynamic version
 │   │   ├── TechnologyOverviewSection.tsx
 │   │   ├── MissionAlignmentSection.tsx
 │   │   ├── UnmetNeedSection.tsx
 │   │   ├── StateOfArtSection.tsx
 │   │   ├── MarketAnalysisSection.tsx
 │   │   ├── DigitalConsiderationsSection.tsx
-│   │   ├── ScoreRecommendationSection.tsx   # Enhanced with IMPACT/VALUE layout
+│   │   ├── ScoreRecommendationSection.tsx
 │   │   ├── SummarySection.tsx
-│   │   └── ScoringComponent.tsx   # Reusable 0-3 scoring component
+│   │   └── ScoringComponent.tsx   # Extract design for dynamic implementation
 │   └── ui/                        # shadcn/ui components
 ├── lib/
+│   ├── form-engine/               # 🎯 ACTIVE DEVELOPMENT - Dynamic form system
 │   ├── prisma.ts                  # Database client (✅ completed)
 │   ├── scoring.ts                 # Auto-calculation engine (✅ completed)
 │   └── utils.ts                   # Utility functions
@@ -330,11 +349,12 @@ DATABASE_URL="prisma+postgres://localhost:51213/?api_key=..."  # Auto-generated 
 - ✅ Validation framework
 - ✅ Seed data structure defined
 
-### Next Steps for Dynamic Forms
-1. **Use the SAME UI components** - Input, Textarea, Select, ScoringComponent from hardcoded form
-2. **Wire the dynamic renderer** - Connect database fields to existing components
-3. **Maintain visual consistency** - Must look exactly like current form
+### Next Steps for Dynamic Forms (ACTIVE DEVELOPMENT)
+1. **Extract UI components** - Copy Input, Textarea, Select, ScoringComponent designs from static form
+2. **Wire the dynamic renderer** - Connect database fields to dynamic field adapters
+3. **Maintain visual consistency** - Must look exactly like static reference form
 4. **Database-driven everything** - Structure, text, options all from database
+5. **FOCUS ONLY ON DYNAMIC FORMS** - No time on static form analysis or improvements
 
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.

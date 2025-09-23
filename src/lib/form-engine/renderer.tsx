@@ -13,6 +13,8 @@ import {
 import { shouldShowField, shouldRequireField, parseConditionalConfig } from './conditional-logic';
 import { getDefaultValue } from './field-mappings-simple';
 import { FieldComponents } from './fields/FieldAdapters';
+import { validateField } from '../validation/form-schemas';
+import { extractScoringInputs, calculateAllScores } from '../scoring/calculations';
 
 // Form state reducer
 function formReducer(state: FormState, action: FormAction): FormState {
@@ -157,6 +159,19 @@ function FormEngineProvider({
     }
   }, [template]);
 
+  // Auto-calculate scores when responses change
+  useEffect(() => {
+    if (state.responses && Object.keys(state.responses).length > 0) {
+      try {
+        const scoringInputs = extractScoringInputs(state.responses);
+        const calculatedScores = calculateAllScores(scoringInputs);
+        dispatch({ type: 'SET_CALCULATED_SCORES', payload: calculatedScores });
+      } catch (error) {
+        console.warn('Error calculating scores:', error);
+      }
+    }
+  }, [state.responses]);
+
   // Context methods
   const setResponse = (fieldCode: string, value: string | number | boolean | string[] | Record<string, unknown>) => {
     dispatch({ type: 'SET_RESPONSE', payload: { fieldCode, value } });
@@ -169,6 +184,10 @@ function FormEngineProvider({
 
   const setRepeatGroupData = (fieldCode: string, data: Record<string, unknown>[]) => {
     dispatch({ type: 'SET_REPEAT_GROUP', payload: { fieldCode, data } });
+  };
+
+  const setError = (fieldCode: string, error: string) => {
+    dispatch({ type: 'SET_ERROR', payload: { fieldCode, error } });
   };
 
   const nextSection = () => {
@@ -226,6 +245,7 @@ function FormEngineProvider({
     errors: state.errors,
     setResponse,
     setRepeatGroupData,
+    setError,
     nextSection,
     previousSection,
     submitForm,
@@ -246,7 +266,7 @@ interface DynamicQuestionProps {
 }
 
 function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
-  const { responses, setResponse, errors } = useFormEngine();
+  const { responses, repeatGroups, setResponse, setRepeatGroupData, setError, errors } = useFormEngine();
 
   // Check if question should be visible
   const conditionalConfig = parseConditionalConfig(question.conditional);
@@ -259,8 +279,45 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
   // Check if question should be required
   const isRequired = shouldRequireField(conditionalConfig, question.isRequired, responses);
 
-  // Get field value
-  const value = responses[question.fieldCode] ?? getDefaultValue(question.type);
+  // Get field value - handle repeatable groups separately
+  const value = question.type === 'REPEATABLE_GROUP'
+    ? repeatGroups[question.fieldCode] ?? []
+    : responses[question.fieldCode] ?? getDefaultValue(question.type);
+
+  // Handle value changes - route arrays to repeatGroups, others to responses
+  const handleChange = (newValue: string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]) => {
+    // Perform real-time validation
+    const validationResult = validateField(
+      question.fieldCode,
+      question.type,
+      newValue,
+      isRequired,
+      question.validation
+    );
+
+    if (question.type === 'REPEATABLE_GROUP' && Array.isArray(newValue)) {
+      setRepeatGroupData(question.fieldCode, newValue as Record<string, unknown>[]);
+    } else {
+      setResponse(question.fieldCode, newValue as string | number | boolean | string[] | Record<string, unknown>);
+    }
+
+    // Set validation error if invalid
+    if (!validationResult.isValid && validationResult.error) {
+      // Use a timeout to avoid showing validation errors immediately as user types
+      setTimeout(() => {
+        const currentErrors = errors[question.fieldCode];
+        if (!currentErrors || currentErrors !== validationResult.error) {
+          // Only update if error has changed to avoid unnecessary re-renders
+          setError(question.fieldCode, validationResult.error!);
+        }
+      }, 500);
+    } else {
+      // Clear error if validation passes
+      if (errors[question.fieldCode]) {
+        setError(question.fieldCode, '');
+      }
+    }
+  };
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -290,8 +347,8 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
         return (
           <FieldComponent
             question={question}
-            value={value}
-            onChange={(newValue) => setResponse(question.fieldCode, newValue)}
+            value={value as string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]}
+            onChange={handleChange}
             error={errors[question.fieldCode]}
             disabled={false}
           />

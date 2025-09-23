@@ -9,6 +9,7 @@ async function main() {
   try {
     // Clear existing dynamic form data
     console.log('🧹 Clearing existing dynamic form data...');
+    await prisma.formSubmission.deleteMany();
     await prisma.questionOption.deleteMany();
     await prisma.scoringConfig.deleteMany();
     await prisma.formQuestion.deleteMany();
