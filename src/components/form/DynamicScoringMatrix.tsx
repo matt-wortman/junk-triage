@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FormQuestionWithDetails } from '@/lib/form-engine/types';
 import { useFormEngine } from '@/lib/form-engine/renderer';
-import { extractScoringInputs, calculateAllScores, getRecommendationColor } from '@/lib/scoring/calculations';
+import { extractScoringInputs, calculateAllScores } from '@/lib/scoring/calculations';
 
 interface DynamicScoringMatrixProps {
   question: FormQuestionWithDetails;

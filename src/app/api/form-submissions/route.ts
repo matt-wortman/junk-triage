@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
 
     } else {
       // List submissions with optional filters
-      const where: any = {};
+      const where: { templateId?: string; submittedBy?: string } = {};
       if (templateId) where.templateId = templateId;
       if (submittedBy) where.submittedBy = submittedBy;
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { FieldType } from '@prisma/client';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,41 +12,30 @@ import { FieldProps } from '../types';
 import { Trash2, Plus } from 'lucide-react';
 
 // Short text field adapter
-export const ShortTextField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
-  console.log('SHORT TEXT FIELD DEBUG:', {
-    fieldCode: question.fieldCode,
-    validation: question.validation,
-    validationType: typeof question.validation
-  });
+const ShortTextFieldComponent: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+  // ✅ MEMOIZE validation parsing to prevent re-parsing on every render
+  const { isInfoBox, validationObj } = useMemo(() => {
+    let validationObj = question.validation;
 
-  // Check if this is an info box
-  let validationObj = question.validation;
-
-  // Parse validation if it's a string (same logic as renderer)
-  if (typeof question.validation === 'string') {
-    try {
-      validationObj = JSON.parse(question.validation);
-      console.log('PARSED VALIDATION:', validationObj);
-    } catch (e) {
-      validationObj = {};
-      console.log('FAILED TO PARSE VALIDATION:', e);
+    // Parse validation if it's a string (same logic as renderer)
+    if (typeof question.validation === 'string') {
+      try {
+        validationObj = JSON.parse(question.validation);
+      } catch (_e) {
+        validationObj = {};
+      }
     }
-  }
 
-  const isInfoBox = validationObj &&
-    typeof validationObj === 'object' &&
-    'isInfoBox' in validationObj &&
-    validationObj.isInfoBox;
+    const isInfoBox = validationObj &&
+      typeof validationObj === 'object' &&
+      'isInfoBox' in validationObj &&
+      validationObj.isInfoBox;
 
-  console.log('INFO BOX CHECK:', {
-    isInfoBox,
-    validationObj,
-    fieldCode: question.fieldCode
-  });
+    return { isInfoBox, validationObj };
+  }, [question.validation]);
 
-  if (isInfoBox) {
-    console.log('INFO BOX DETECTED! Rendering hardcoded list.');
-    const infoBoxStyle = validationObj.infoBoxStyle || 'blue';
+  if (isInfoBox && validationObj) {
+    const infoBoxStyle = (validationObj as any).infoBoxStyle || 'blue';
     const styleClasses = infoBoxStyle === 'blue'
       ? 'bg-blue-50 border-blue-200 text-blue-800'
       : 'bg-gray-50 border-gray-200 text-gray-800';
@@ -71,6 +60,7 @@ export const ShortTextField: React.FC<FieldProps> = ({ question, value, onChange
 
   return (
     <Input
+      id={question.fieldCode}  // ✅ ADD id to match label's for attribute
       value={value as string || ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder={question.placeholder || ''}
@@ -80,10 +70,14 @@ export const ShortTextField: React.FC<FieldProps> = ({ question, value, onChange
   );
 };
 
+// ✅ MEMOIZE component to prevent unnecessary re-renders
+const ShortTextField = memo(ShortTextFieldComponent);
+
 // Long text field adapter
-export const LongTextField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+const LongTextField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   return (
     <Textarea
+      id={question.fieldCode}  // ✅ ADD id to match label's for attribute
       value={value as string || ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder={question.placeholder || ''}
@@ -95,7 +89,7 @@ export const LongTextField: React.FC<FieldProps> = ({ question, value, onChange,
 };
 
 // Integer field adapter
-export const IntegerField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+const IntegerField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   return (
     <Input
       type="number"
@@ -109,7 +103,7 @@ export const IntegerField: React.FC<FieldProps> = ({ question, value, onChange, 
 };
 
 // Single select field adapter
-export const SingleSelectField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+const SingleSelectField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   return (
     <Select value={value as string || ''} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger className={error ? 'border-red-500' : ''}>
@@ -127,7 +121,7 @@ export const SingleSelectField: React.FC<FieldProps> = ({ question, value, onCha
 };
 
 // Multi-select field adapter
-export const MultiSelectField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+const MultiSelectField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   const selectedValues = (value as string[]) || [];
 
   const handleChange = (optionValue: string, checked: boolean) => {
@@ -158,7 +152,7 @@ export const MultiSelectField: React.FC<FieldProps> = ({ question, value, onChan
 };
 
 // Checkbox group field adapter
-export const CheckboxGroupField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+const CheckboxGroupField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   const selectedValues = (value as string[]) || [];
 
   const handleChange = (optionValue: string, checked: boolean) => {
@@ -189,7 +183,7 @@ export const CheckboxGroupField: React.FC<FieldProps> = ({ question, value, onCh
 };
 
 // Date field adapter
-export const DateField: React.FC<FieldProps> = ({ value, onChange, error, disabled }) => {
+const DateField: React.FC<FieldProps> = ({ value, onChange, error, disabled }) => {
   return (
     <Input
       type="date"
@@ -202,7 +196,7 @@ export const DateField: React.FC<FieldProps> = ({ value, onChange, error, disabl
 };
 
 // Scoring field adapter - uses the existing ScoringComponent
-export const ScoringField: React.FC<FieldProps> = ({ question, value, onChange, error }) => {
+const ScoringField: React.FC<FieldProps> = ({ question, value, onChange, error }) => {
   // Parse the criteria JSON string from the database
   let criteria = {
     "0": "No alignment",
@@ -235,7 +229,7 @@ export const ScoringField: React.FC<FieldProps> = ({ question, value, onChange, 
 };
 
 // Repeatable group field adapter - dynamic table with add/remove rows
-export const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   const rows = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
 
   // Get field configuration from question metadata
@@ -360,7 +354,7 @@ export const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, on
 
       {rows.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-6">
-          No entries yet. Click "Add {fieldConfig.length > 1 ? 'Row' : 'Item'}" to get started.
+          No entries yet. Click {`"Add ${fieldConfig.length > 1 ? 'Row' : 'Item'}"`} to get started.
         </p>
       )}
     </div>
@@ -368,12 +362,12 @@ export const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, on
 };
 
 // Scoring matrix field adapter - renders the comprehensive scoring matrix
-export const ScoringMatrixField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
+const ScoringMatrixField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   return (
     <DynamicScoringMatrix
       question={question}
       value={value}
-      onChange={onChange}
+      onChange={onChange as (value: unknown) => void}
       error={error}
       disabled={disabled}
     />

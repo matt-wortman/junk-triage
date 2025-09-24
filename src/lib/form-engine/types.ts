@@ -106,6 +106,7 @@ export interface FieldTypeMapping {
   [FieldType.DATE]: FieldComponent;
   [FieldType.REPEATABLE_GROUP]: RepeatableComponent;
   [FieldType.SCORING_0_3]: ScoringComponent;
+  [FieldType.SCORING_MATRIX]: ScoringComponent;
 }
 
 // Scoring calculation types

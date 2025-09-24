@@ -14,6 +14,7 @@ export const fieldTypeComponentMap = {
   [FieldType.DATE]: 'DateInput',
   [FieldType.REPEATABLE_GROUP]: 'RepeatableGroup',
   [FieldType.SCORING_0_3]: 'ScoringComponent',
+  [FieldType.SCORING_MATRIX]: 'ScoringMatrixComponent',
 };
 
 /**
@@ -41,7 +42,8 @@ export function isMultiValueField(fieldType: FieldType): boolean {
 export function isNumericField(fieldType: FieldType): boolean {
   const numericTypes: FieldType[] = [
     FieldType.INTEGER,
-    FieldType.SCORING_0_3
+    FieldType.SCORING_0_3,
+    FieldType.SCORING_MATRIX
   ];
   return numericTypes.includes(fieldType);
 }
@@ -58,6 +60,7 @@ export function getDefaultValue(fieldType: FieldType): string | number | string[
 
     case FieldType.INTEGER:
     case FieldType.SCORING_0_3:
+    case FieldType.SCORING_MATRIX:
       return 0;
 
     case FieldType.MULTI_SELECT:
@@ -84,6 +87,10 @@ export function validateFieldType(fieldType: FieldType, value: string | number |
     case FieldType.SCORING_0_3:
       const num = Number(value);
       return !isNaN(num) && num >= 0 && num <= 3;
+
+    case FieldType.SCORING_MATRIX:
+      // Scoring matrix may contain multiple values or complex scoring data
+      return value !== null && value !== undefined;
 
     case FieldType.MULTI_SELECT:
     case FieldType.CHECKBOX_GROUP:

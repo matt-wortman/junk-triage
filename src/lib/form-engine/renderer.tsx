@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import {
   FormTemplateWithSections,
   FormSectionWithQuestions,
@@ -8,7 +8,9 @@ import {
   FormContext,
   FormResponse,
   RepeatableGroupData,
-  CalculatedScores
+  CalculatedScores,
+  FieldType,
+  ValidationConfig
 } from './types';
 import { shouldShowField, shouldRequireField, parseConditionalConfig } from './conditional-logic';
 import { getDefaultValue } from './field-mappings-simple';
@@ -25,11 +27,11 @@ function formReducer(state: FormState, action: FormAction): FormState {
       return {
         ...state,
         template: action.payload,
-        responses: {},
-        repeatGroups: {},
-        currentSection: 0,
-        errors: {},
-        calculatedScores: null
+        responses: state.responses,        // ✅ PRESERVE existing data
+        repeatGroups: state.repeatGroups, // ✅ PRESERVE existing data
+        currentSection: state.currentSection, // ✅ PRESERVE navigation state
+        errors: state.errors,              // ✅ PRESERVE validation state
+        calculatedScores: state.calculatedScores // ✅ PRESERVE calculated scores
       };
 
     case 'SET_RESPONSE':
@@ -270,6 +272,35 @@ interface DynamicQuestionProps {
 function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
   const { responses, repeatGroups, setResponse, setRepeatGroupData, setError, errors } = useFormEngine();
 
+  // ✅ ADD debounced validation to reduce validation calls
+  const validationTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedValidation = useCallback((
+    fieldCode: string,
+    fieldType: FieldType,
+    value: string | number | boolean | string[] | Record<string, unknown>,
+    isRequired: boolean,
+    validation: ValidationConfig | null
+  ) => {
+    // Clear existing timeout
+    if (validationTimeout.current) {
+      clearTimeout(validationTimeout.current);
+    }
+
+    // Set new timeout for validation
+    validationTimeout.current = setTimeout(() => {
+      const validationResult = validateField(fieldCode, fieldType, value, isRequired, validation || undefined);
+
+      if (!validationResult.isValid && validationResult.error) {
+        setError(fieldCode, validationResult.error);
+      } else {
+        if (errors[fieldCode]) {
+          setError(fieldCode, '');
+        }
+      }
+    }, 300); // ✅ 300ms debounce for validation
+  }, [setError, errors]);
+
   // Check if question should be visible
   const conditionalConfig = parseConditionalConfig(question.conditional);
   const isVisible = shouldShowField(conditionalConfig, responses);
@@ -285,7 +316,7 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
   if (typeof question.validation === 'string') {
     try {
       validationObj = JSON.parse(question.validation);
-    } catch (e) {
+    } catch (_e) {
       validationObj = {};
     }
   }
@@ -319,37 +350,21 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
 
   // Handle value changes - route arrays to repeatGroups, others to responses
   const handleChange = (newValue: string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]) => {
-    // Perform real-time validation
-    const validationResult = validateField(
-      question.fieldCode,
-      question.type,
-      newValue,
-      isRequired,
-      question.validation
-    );
-
+    // ✅ UPDATE state immediately for responsive UI
     if (question.type === 'REPEATABLE_GROUP' && Array.isArray(newValue)) {
       setRepeatGroupData(question.fieldCode, newValue as Record<string, unknown>[]);
     } else {
       setResponse(question.fieldCode, newValue as string | number | boolean | string[] | Record<string, unknown>);
     }
 
-    // Set validation error if invalid
-    if (!validationResult.isValid && validationResult.error) {
-      // Use a timeout to avoid showing validation errors immediately as user types
-      setTimeout(() => {
-        const currentErrors = errors[question.fieldCode];
-        if (!currentErrors || currentErrors !== validationResult.error) {
-          // Only update if error has changed to avoid unnecessary re-renders
-          setError(question.fieldCode, validationResult.error!);
-        }
-      }, 500);
-    } else {
-      // Clear error if validation passes
-      if (errors[question.fieldCode]) {
-        setError(question.fieldCode, '');
-      }
-    }
+    // ✅ USE debounced validation to reduce validation calls
+    debouncedValidation(
+      question.fieldCode,
+      question.type,
+      newValue as string | number | boolean | string[] | Record<string, unknown>,
+      isRequired,
+      question.validation as ValidationConfig | null
+    );
   };
 
   // For info boxes, render without Card wrapper

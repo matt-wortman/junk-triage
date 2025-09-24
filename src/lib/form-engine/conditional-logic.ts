@@ -187,7 +187,7 @@ export function parseConditionalConfig(conditionalJson: unknown): ConditionalCon
   try {
     if (!conditionalJson) return null;
 
-    let config: any;
+    let config: unknown;
 
     // If it's already parsed
     if (typeof conditionalJson === 'object' && conditionalJson !== null) {
@@ -201,8 +201,8 @@ export function parseConditionalConfig(conditionalJson: unknown): ConditionalCon
     }
 
     // Handle simplified format from seed data: { showIf: [...] }
-    if (config.showIf && Array.isArray(config.showIf)) {
-      const rules: ConditionalRule[] = config.showIf.map((condition: any) => ({
+    if (config && typeof config === 'object' && 'showIf' in config && Array.isArray((config as any).showIf)) {
+      const rules: ConditionalRule[] = (config as any).showIf.map((condition: Record<string, unknown>) => ({
         field: condition.field,
         operator: condition.operator,
         value: condition.value,
@@ -216,7 +216,7 @@ export function parseConditionalConfig(conditionalJson: unknown): ConditionalCon
     }
 
     // Handle full format: { rules: [...], logic: "AND|OR" }
-    if (config.rules && Array.isArray(config.rules)) {
+    if (config && typeof config === 'object' && 'rules' in config && Array.isArray((config as any).rules)) {
       return config as ConditionalConfig;
     }
 

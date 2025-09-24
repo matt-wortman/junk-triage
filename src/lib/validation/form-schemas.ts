@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { FieldType } from '@prisma/client';
+import { ValidationConfig } from '../form-engine/types';
 
 // Base validation schemas for different field types
 export const fieldValidationSchemas = {
@@ -11,6 +12,7 @@ export const fieldValidationSchemas = {
   [FieldType.CHECKBOX_GROUP]: z.array(z.string()).min(1, 'Please select at least one option'),
   [FieldType.DATE]: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please enter a valid date'),
   [FieldType.SCORING_0_3]: z.number().int('Score must be a whole number').min(0, 'Score must be at least 0').max(3, 'Score must be at most 3'),
+  [FieldType.SCORING_MATRIX]: z.unknown().optional(),
   [FieldType.REPEATABLE_GROUP]: z.array(z.record(z.string(), z.string())).optional(),
 };
 
@@ -24,6 +26,7 @@ export const optionalFieldValidationSchemas = {
   [FieldType.CHECKBOX_GROUP]: z.array(z.string()).optional(),
   [FieldType.DATE]: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Please enter a valid date').optional(),
   [FieldType.SCORING_0_3]: z.number().int('Score must be a whole number').min(0, 'Score must be at least 0').max(3, 'Score must be at most 3').optional(),
+  [FieldType.SCORING_MATRIX]: z.unknown().optional(),
   [FieldType.REPEATABLE_GROUP]: z.array(z.record(z.string(), z.string())).optional(),
 };
 
@@ -72,7 +75,7 @@ export function getFieldValidationSchema(
   fieldCode: string,
   fieldType: FieldType,
   isRequired: boolean,
-  customValidation?: any
+  _customValidation?: ValidationConfig
 ): z.ZodSchema {
   // Check for specific field validation first
   if (specificFieldValidations[fieldCode as keyof typeof specificFieldValidations]) {
@@ -106,10 +109,10 @@ export function validateField(
   fieldType: FieldType,
   value: unknown,
   isRequired: boolean,
-  customValidation?: any
+  _customValidation?: ValidationConfig
 ): { isValid: boolean; error?: string } {
   try {
-    const schema = getFieldValidationSchema(fieldCode, fieldType, isRequired, customValidation);
+    const schema = getFieldValidationSchema(fieldCode, fieldType, isRequired, _customValidation);
     schema.parse(value);
     return { isValid: true };
   } catch (error) {
@@ -136,7 +139,7 @@ export function validateFormData(
     fieldCode: string;
     type: FieldType;
     isRequired: boolean;
-    validation?: any;
+    validation?: ValidationConfig;
   }>
 ): { isValid: boolean; errors: Record<string, string> } {
   const errors: Record<string, string> = {};
@@ -188,8 +191,8 @@ export function useFieldValidation(
   fieldType: FieldType,
   value: unknown,
   isRequired: boolean,
-  customValidation?: any
+  _customValidation?: ValidationConfig
 ) {
-  const result = validateField(fieldCode, fieldType, value, isRequired, customValidation);
+  const result = validateField(fieldCode, fieldType, value, isRequired, _customValidation);
   return result;
 }

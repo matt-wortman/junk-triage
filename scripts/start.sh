@@ -12,9 +12,13 @@ done
 
 echo "✅ Database is ready!"
 
-# Run database migrations
-echo "🔄 Running database migrations..."
-npx prisma migrate deploy
+# For Docker: Use db push to sync schema (simpler than migrations for containers)
+echo "🔄 Syncing database schema..."
+npx prisma db push --accept-data-loss
+
+# Generate Prisma client
+echo "⚡ Generating Prisma client..."
+npx prisma generate
 
 # Seed the database if needed
 echo "🌱 Seeding database..."

@@ -1,8 +1,9 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { SubmissionStatus } from '@prisma/client'
+import { SubmissionStatus, Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
+import { FormResponse, RepeatableGroupData } from '@/lib/form-engine/types'
 
 export interface FormSubmissionData {
   templateId: string
@@ -41,7 +42,7 @@ export async function submitFormResponse(
       const responseEntries = Object.entries(data.responses).map(([questionCode, value]) => ({
         submissionId: submission.id,
         questionCode,
-        value: value as any, // Prisma Json type
+        value: value as any,
       }))
 
       if (responseEntries.length > 0) {
@@ -57,7 +58,7 @@ export async function submitFormResponse(
             submissionId: submission.id,
             questionCode,
             rowIndex: index,
-            data: rowData as any, // Prisma Json type
+            data: rowData as any,
           }))
         }
         return []
@@ -292,17 +293,17 @@ export async function loadDraftResponse(draftId: string, userId: string = 'anony
     }
 
     // Transform the data back to the format expected by the form
-    const responses: Record<string, unknown> = {}
+    const responses: FormResponse = {}
     submission.responses.forEach((response) => {
-      responses[response.questionCode] = response.value
+      responses[response.questionCode] = response.value as string | number | boolean | string[] | Record<string, unknown>
     })
 
-    const repeatGroups: Record<string, unknown> = {}
+    const repeatGroups: RepeatableGroupData = {}
     submission.repeatGroups.forEach((group) => {
       if (!repeatGroups[group.questionCode]) {
         repeatGroups[group.questionCode] = []
       }
-      ;(repeatGroups[group.questionCode] as any[])[group.rowIndex] = group.data
+      repeatGroups[group.questionCode][group.rowIndex] = group.data as Record<string, unknown>
     })
 
     const calculatedScores: Record<string, number> = {}
