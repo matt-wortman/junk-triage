@@ -6,9 +6,9 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: triage_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-triage_db}
     ports:
       - "5432:5432"
     volumes:
@@ -30,9 +30,12 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@database:5432/triage_db
-      - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=your-secret-key-change-this
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@database:5432/triage_db}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-development-secret-change-me}
+      - RUN_PRISMA_SEED=${RUN_PRISMA_SEED:-true}
+      # Set to false for production to start with clean database
+      - SEED_DEMO_DATA=${SEED_DEMO_DATA:-true}
     depends_on:
       database:
         condition: service_healthy

@@ -1,101 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { SubmissionStatus } from '@prisma/client';
+import { SubmissionStatus, Prisma } from '@prisma/client';
+import {
+  formSubmissionRequestSchema,
+  formSubmissionUpdateSchema,
+} from '@/lib/validation/form-submission';
+
+const isDev = process.env.NODE_ENV !== 'production';
+
+function buildScoreEntries(
+  submissionId: string,
+  calculatedScores: Record<string, Prisma.JsonValue> | undefined
+) {
+  if (!calculatedScores) {
+    return [];
+  }
+
+  return Object.entries(calculatedScores)
+    .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+    .map(([scoreType, value]) => ({
+      submissionId,
+      scoreType,
+      value: value as number,
+    }));
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      templateId,
-      submittedBy,
-      status = SubmissionStatus.DRAFT,
-      responses,
-      repeatGroups,
-      calculatedScores
-    } = body;
+    const json = await request.json();
+    const parseResult = formSubmissionRequestSchema.safeParse(json);
 
-    console.log('📝 Creating form submission:', { templateId, submittedBy, status });
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid form submission payload',
+          details: parseResult.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
 
-    // Create the form submission
+    const { templateId, submittedBy, status, responses, repeatGroups, calculatedScores } =
+      parseResult.data;
+
+    const actor = submittedBy ?? 'anonymous';
+    const submissionStatus = status ?? SubmissionStatus.DRAFT;
+
+    if (isDev) {
+      console.log('Creating form submission', {
+        templateId,
+        submittedBy: actor,
+        status: submissionStatus,
+      });
+    }
+
     const submission = await prisma.formSubmission.create({
       data: {
         templateId,
-        submittedBy,
-        status,
-        submittedAt: status === SubmissionStatus.SUBMITTED ? new Date() : null,
+        submittedBy: actor,
+        status: submissionStatus,
+        submittedAt:
+          submissionStatus === SubmissionStatus.SUBMITTED ? new Date() : null,
       },
     });
 
-    console.log(`✅ Created form submission: ${submission.id}`);
+    const responseEntries = Object.entries(responses).map(([questionCode, value]) => ({
+      submissionId: submission.id,
+      questionCode,
+      value: value as Prisma.InputJsonValue,
+    }));
 
-    // Store individual question responses
-    if (responses && Object.keys(responses).length > 0) {
-      const responseEntries = Object.entries(responses).map(([questionCode, value]) => ({
-        submissionId: submission.id,
-        questionCode,
-        value: JSON.stringify(value),
-      }));
-
-      await prisma.questionResponse.createMany({
-        data: responseEntries,
-      });
-
-      console.log(`📝 Stored ${responseEntries.length} question responses`);
+    if (responseEntries.length > 0) {
+      await prisma.questionResponse.createMany({ data: responseEntries });
     }
 
-    // Store repeatable group data
-    if (repeatGroups && Object.keys(repeatGroups).length > 0) {
-      const repeatGroupEntries: Array<{
-        submissionId: string;
-        questionCode: string;
-        rowIndex: number;
-        data: string;
-      }> = [];
-
-      for (const [questionCode, data] of Object.entries(repeatGroups)) {
-        if (Array.isArray(data)) {
-          data.forEach((rowData, index) => {
-            repeatGroupEntries.push({
+    const repeatGroupEntries = Object.entries(repeatGroups).flatMap(
+      ([questionCode, rows]) =>
+        Array.isArray(rows)
+          ? rows.map((rowData, index) => ({
               submissionId: submission.id,
               questionCode,
               rowIndex: index,
-              data: JSON.stringify(rowData),
-            });
-          });
-        }
-      }
+              data: rowData as Prisma.InputJsonValue,
+            }))
+          : []
+    );
 
-      if (repeatGroupEntries.length > 0) {
-        await prisma.repeatableGroupResponse.createMany({
-          data: repeatGroupEntries,
-        });
-
-        console.log(`📋 Stored ${repeatGroupEntries.length} repeatable group entries`);
-      }
+    if (repeatGroupEntries.length > 0) {
+      await prisma.repeatableGroupResponse.createMany({ data: repeatGroupEntries });
     }
 
-    // Store calculated scores (only valid numeric values)
-    if (calculatedScores && Object.keys(calculatedScores).length > 0) {
-      const scoreEntries = Object.entries(calculatedScores)
-        .filter(([scoreType, value]) => {
-          // Only include numeric scores, exclude text fields like recommendation/recommendationText
-          const isNumeric = typeof value === 'number' && !isNaN(value) && isFinite(value);
-          const isScoreField = scoreType.toLowerCase().includes('score');
-          return isNumeric && isScoreField;
-        })
-        .map(([scoreType, value]) => ({
-          submissionId: submission.id,
-          scoreType,
-          value: Number(value),
-        }));
-
-      if (scoreEntries.length > 0) {
-        await prisma.calculatedScore.createMany({
-          data: scoreEntries,
-        });
-      }
-
-      console.log(`🎯 Stored ${scoreEntries.length} calculated scores`);
+    const scoreEntries = buildScoreEntries(submission.id, calculatedScores);
+    if (scoreEntries.length > 0) {
+      await prisma.calculatedScore.createMany({ data: scoreEntries });
     }
 
     return NextResponse.json({
@@ -103,17 +101,18 @@ export async function POST(request: NextRequest) {
       submissionId: submission.id,
       status: submission.status,
     });
-
   } catch (error) {
     const err = error as Error;
-    console.error('❌ Error creating form submission:', err.message);
-    console.error('Stack trace:', err.stack);
+    console.error('Error creating form submission:', err);
 
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to save form submission',
-      details: err.message,
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to save form submission',
+        details: err.message,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -125,7 +124,6 @@ export async function GET(request: NextRequest) {
     const submittedBy = searchParams.get('submittedBy');
 
     if (submissionId) {
-      // Get specific submission
       const submission = await prisma.formSubmission.findUnique({
         where: { id: submissionId },
         include: {
@@ -136,36 +134,27 @@ export async function GET(request: NextRequest) {
       });
 
       if (!submission) {
-        return NextResponse.json({
-          success: false,
-          error: 'Submission not found',
-        }, { status: 404 });
+        return NextResponse.json(
+          { success: false, error: 'Submission not found' },
+          { status: 404 }
+        );
       }
 
-      // Transform the data back to the expected format
-      const responses: Record<string, unknown> = {};
-      submission.responses.forEach(response => {
-        try {
-          responses[response.questionCode] = JSON.parse(response.value as string);
-        } catch {
-          responses[response.questionCode] = response.value;
-        }
+      const responses: Record<string, Prisma.JsonValue> = {};
+      submission.responses.forEach((response) => {
+        responses[response.questionCode] = response.value as Prisma.JsonValue;
       });
 
-      const repeatGroups: Record<string, unknown[]> = {};
-      submission.repeatGroups.forEach(group => {
-        if (!repeatGroups[group.questionCode]) {
-          repeatGroups[group.questionCode] = [];
+      const repeatable: Record<string, unknown[]> = {};
+      submission.repeatGroups.forEach((group) => {
+        if (!repeatable[group.questionCode]) {
+          repeatable[group.questionCode] = [];
         }
-        try {
-          repeatGroups[group.questionCode][group.rowIndex] = JSON.parse(group.data as string);
-        } catch {
-          repeatGroups[group.questionCode][group.rowIndex] = group.data;
-        }
+        repeatable[group.questionCode][group.rowIndex] = group.data as unknown;
       });
 
       const calculatedScores: Record<string, number> = {};
-      submission.scores.forEach(score => {
+      submission.scores.forEach((score) => {
         calculatedScores[score.scoreType] = score.value;
       });
 
@@ -180,150 +169,113 @@ export async function GET(request: NextRequest) {
           updatedAt: submission.updatedAt,
           submittedAt: submission.submittedAt,
           responses,
-          repeatGroups,
+          repeatGroups: repeatable,
           calculatedScores,
         },
       });
-
-    } else {
-      // List submissions with optional filters
-      const where: { templateId?: string; submittedBy?: string } = {};
-      if (templateId) where.templateId = templateId;
-      if (submittedBy) where.submittedBy = submittedBy;
-
-      const submissions = await prisma.formSubmission.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        take: 50, // Limit to 50 most recent
-        select: {
-          id: true,
-          templateId: true,
-          status: true,
-          submittedBy: true,
-          createdAt: true,
-          updatedAt: true,
-          submittedAt: true,
-        },
-      });
-
-      return NextResponse.json({
-        success: true,
-        submissions,
-      });
     }
 
+    const where: { templateId?: string; submittedBy?: string } = {};
+    if (templateId) where.templateId = templateId;
+    if (submittedBy) where.submittedBy = submittedBy;
+
+    const submissions = await prisma.formSubmission.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        templateId: true,
+        status: true,
+        submittedBy: true,
+        createdAt: true,
+        updatedAt: true,
+        submittedAt: true,
+      },
+    });
+
+    return NextResponse.json({ success: true, submissions });
   } catch (error) {
     const err = error as Error;
-    console.error('❌ Error fetching form submissions:', err.message);
+    console.error('Error fetching form submissions:', err);
 
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch form submissions',
-      details: err.message,
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch form submissions',
+        details: err.message,
+      },
+      { status: 500 }
+    );
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const body = await request.json();
-    const {
-      submissionId,
-      status,
-      responses,
-      repeatGroups,
-      calculatedScores
-    } = body;
+    const json = await request.json();
+    const parseResult = formSubmissionUpdateSchema.safeParse(json);
 
-    console.log('🔄 Updating form submission:', submissionId);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid form submission payload',
+          details: parseResult.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
 
-    // Update the submission
+    const { submissionId, status, responses, repeatGroups, calculatedScores } =
+      parseResult.data;
+
+    if (isDev) {
+      console.log('Updating form submission', submissionId);
+    }
+
     const submission = await prisma.formSubmission.update({
       where: { id: submissionId },
       data: {
-        status: status || undefined,
-        submittedAt: status === SubmissionStatus.SUBMITTED ? new Date() : undefined,
+        status: status ?? undefined,
+        submittedAt:
+          status === SubmissionStatus.SUBMITTED ? new Date() : undefined,
         updatedAt: new Date(),
       },
     });
 
-    // Clear existing responses and add new ones
-    if (responses) {
-      await prisma.questionResponse.deleteMany({
-        where: { submissionId },
-      });
+    await prisma.questionResponse.deleteMany({ where: { submissionId } });
+    await prisma.repeatableGroupResponse.deleteMany({ where: { submissionId } });
+    await prisma.calculatedScore.deleteMany({ where: { submissionId } });
 
-      if (Object.keys(responses).length > 0) {
-        const responseEntries = Object.entries(responses).map(([questionCode, value]) => ({
-          submissionId,
-          questionCode,
-          value: JSON.stringify(value),
-        }));
+    const responseEntries = Object.entries(responses).map(([questionCode, value]) => ({
+      submissionId,
+      questionCode,
+      value: value as Prisma.InputJsonValue,
+    }));
 
-        await prisma.questionResponse.createMany({
-          data: responseEntries,
-        });
-      }
+    if (responseEntries.length > 0) {
+      await prisma.questionResponse.createMany({ data: responseEntries });
     }
 
-    // Clear existing repeat groups and add new ones
-    if (repeatGroups) {
-      await prisma.repeatableGroupResponse.deleteMany({
-        where: { submissionId },
-      });
-
-      const repeatGroupEntries: Array<{
-        submissionId: string;
-        questionCode: string;
-        rowIndex: number;
-        data: string;
-      }> = [];
-      for (const [questionCode, data] of Object.entries(repeatGroups)) {
-        if (Array.isArray(data)) {
-          data.forEach((rowData, index) => {
-            repeatGroupEntries.push({
+    const repeatGroupEntries = Object.entries(repeatGroups).flatMap(
+      ([questionCode, rows]) =>
+        Array.isArray(rows)
+          ? rows.map((rowData, index) => ({
               submissionId,
               questionCode,
               rowIndex: index,
-              data: JSON.stringify(rowData),
-            });
-          });
-        }
-      }
+              data: rowData as Prisma.InputJsonValue,
+            }))
+          : []
+    );
 
-      if (repeatGroupEntries.length > 0) {
-        await prisma.repeatableGroupResponse.createMany({
-          data: repeatGroupEntries,
-        });
-      }
+    if (repeatGroupEntries.length > 0) {
+      await prisma.repeatableGroupResponse.createMany({ data: repeatGroupEntries });
     }
 
-    // Update calculated scores
-    if (calculatedScores) {
-      await prisma.calculatedScore.deleteMany({
-        where: { submissionId },
-      });
-
-      if (Object.keys(calculatedScores).length > 0) {
-        const scoreEntries = Object.entries(calculatedScores)
-          .filter(([scoreType, value]) => {
-            // Only include numeric scores, exclude text fields like recommendation/recommendationText
-            const isNumeric = typeof value === 'number' && !isNaN(value) && isFinite(value);
-            const isScoreField = scoreType.toLowerCase().includes('score');
-            return isNumeric && isScoreField;
-          })
-          .map(([scoreType, value]) => ({
-            submissionId,
-            scoreType,
-            value: Number(value),
-          }));
-
-        if (scoreEntries.length > 0) {
-          await prisma.calculatedScore.createMany({
-            data: scoreEntries,
-          });
-        }
-      }
+    const scoreEntries = buildScoreEntries(submissionId, calculatedScores);
+    if (scoreEntries.length > 0) {
+      await prisma.calculatedScore.createMany({ data: scoreEntries });
     }
 
     return NextResponse.json({
@@ -331,15 +283,17 @@ export async function PUT(request: NextRequest) {
       submissionId: submission.id,
       status: submission.status,
     });
-
   } catch (error) {
     const err = error as Error;
-    console.error('❌ Error updating form submission:', err.message);
+    console.error('Error updating form submission:', err);
 
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to update form submission',
-      details: err.message,
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to update form submission',
+        details: err.message,
+      },
+      { status: 500 }
+    );
   }
 }

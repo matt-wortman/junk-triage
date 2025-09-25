@@ -1,12 +1,12 @@
-import { PrismaClient, FieldType } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { completeFormStructure } from './complete-questions';
+import { FormTemplateSeed } from './types';
+import { getPrismaClient } from './prisma-factory';
 
-const prisma = new PrismaClient();
+const formStructureData: FormTemplateSeed = completeFormStructure;
 
-export const formStructureData = completeFormStructure;
-
-export async function seedFormStructure() {
-  console.log('✅ Created form template:', formStructureData.name, '(cmfvr0i9g007xgticg1h9qqjs)');
+export async function seedFormStructure(injectedPrisma?: PrismaClient) {
+  const prisma = getPrismaClient(injectedPrisma);
 
   // Create the form template
   const template = await prisma.formTemplate.create({
@@ -43,10 +43,10 @@ export async function seedFormStructure() {
           fieldCode: questionData.fieldCode,
           label: questionData.label,
           type: questionData.type,
-          helpText: (questionData as any).helpText,
-          placeholder: (questionData as any).placeholder,
-          validation: (questionData as any).validation ? JSON.stringify((questionData as any).validation) : undefined,
-          conditional: (questionData as any).conditional ? JSON.stringify((questionData as any).conditional) : undefined,
+          helpText: questionData.helpText ?? null,
+          placeholder: questionData.placeholder ?? null,
+          validation: toJsonValue(questionData.validation),
+          conditional: toJsonValue(questionData.conditional),
           order: questionData.order,
           isRequired: questionData.isRequired,
         },
@@ -55,8 +55,8 @@ export async function seedFormStructure() {
       console.log(`    ✅ Created question: ${question.fieldCode} - ${question.label}`);
 
       // Create options if they exist
-      if ((questionData as any).options) {
-        for (const optionData of (questionData as any).options) {
+      if (questionData.options) {
+        for (const optionData of questionData.options) {
           await prisma.questionOption.create({
             data: {
               questionId: question.id,
@@ -66,18 +66,18 @@ export async function seedFormStructure() {
             },
           });
         }
-        console.log(`      ✅ Created ${(questionData as any).options.length} options`);
+        console.log(`      ✅ Created ${questionData.options.length} options`);
       }
 
       // Create scoring config if it exists
-      if ((questionData as any).scoringConfig) {
+      if (questionData.scoringConfig) {
         await prisma.scoringConfig.create({
           data: {
             questionId: question.id,
-            minScore: (questionData as any).scoringConfig.minScore,
-            maxScore: (questionData as any).scoringConfig.maxScore,
-            weight: (questionData as any).scoringConfig.weight,
-            criteria: JSON.stringify((questionData as any).scoringConfig.criteria),
+            minScore: questionData.scoringConfig.minScore,
+            maxScore: questionData.scoringConfig.maxScore,
+            weight: questionData.scoringConfig.weight,
+            criteria: toJsonValue(questionData.scoringConfig.criteria) ?? Prisma.JsonNull,
           },
         });
         console.log(`      ✅ Created scoring config`);
@@ -87,4 +87,16 @@ export async function seedFormStructure() {
 
   console.log(`🎉 Successfully seeded form structure with ${formStructureData.sections.length} sections`);
   return template;
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue | Prisma.JsonNullValueInput | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return Prisma.JsonNull;
+  }
+
+  return value as Prisma.InputJsonValue;
 }

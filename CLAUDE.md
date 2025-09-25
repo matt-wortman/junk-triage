@@ -2,6 +2,43 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 PROJECT-SPECIFIC EVIDENCE REQUIREMENTS
+
+**This project inherits the global Evidence-Based Coding Protocol. Use these commands:**
+
+### Research Phase (CONTEXTUAL EVIDENCE)
+```bash
+# Find similar implementations in this codebase:
+grep -r "FormSubmission" --include="*.ts" src/
+grep -r "questionResponse" --include="*.ts" prisma/
+grep -r "SubmissionStatus" --include="*.ts" src/
+cat src/app/dynamic-form/actions.ts  # See how data is stored
+```
+
+### Verification Phase (TYPE EVIDENCE)
+```bash
+# This project's type checking:
+npm run type-check     # Run after every 20 lines
+npm run lint          # Additional code quality checks
+```
+
+### Execution Phase (EXECUTION EVIDENCE)
+```bash
+# This project's testing/verification:
+npm test              # Run tests
+npm run db:seed       # Test database operations
+npx prisma studio     # Verify database data
+tsx scripts/test-feature.ts  # Custom verification scripts
+```
+
+### Project-Specific Data Contract Rules
+- Form field values use snake_case: `"medical_device"` not `"Medical Device"`
+- Store data as proper types using `Prisma.InputJsonValue`, not `String(value)`
+- Question responses expect exact option values from database
+- All submissions must have valid templateId from existing FormTemplate
+
+---
+
 ## Project Overview
 
 This is a web application project to replicate the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage form as a modern web form connected to a database. The original form is available as `Triage.pdf` in the project root.

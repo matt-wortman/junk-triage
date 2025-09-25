@@ -3,28 +3,29 @@ set -e
 
 echo "🚀 Starting Tech Triage Platform..."
 
-# Wait for database to be ready
 echo "⏳ Waiting for database to be ready..."
-until npx prisma db push --accept-data-loss; do
+until npx prisma migrate deploy >/dev/null 2>&1; do
   echo "Database not ready, retrying in 5 seconds..."
   sleep 5
 done
 
-echo "✅ Database is ready!"
+echo "✅ Database migrations applied."
 
-# For Docker: Use db push to sync schema (simpler than migrations for containers)
-echo "🔄 Syncing database schema..."
-npx prisma db push --accept-data-loss
-
-# Generate Prisma client
 echo "⚡ Generating Prisma client..."
 npx prisma generate
 
-# Seed the database if needed
-echo "🌱 Seeding database..."
-npx prisma db seed || echo "⚠️  No seed script found or seeding failed"
+if [ "${RUN_PRISMA_SEED:-true}" = "true" ]; then
+  echo "🌱 Seeding database..."
+  if [ "${SEED_DEMO_DATA:-true}" = "true" ]; then
+    echo "  📊 Demo data will be included (SEED_DEMO_DATA=true)"
+  else
+    echo "  🧹 Clean database only (SEED_DEMO_DATA=false)"
+  fi
+  npx prisma db seed || echo "⚠️  Prisma seed failed or is not configured"
+else
+  echo "⏭️  Skipping database seed (RUN_PRISMA_SEED=false)"
+fi
 
 echo "🎉 Starting Next.js application..."
 
-# Start the Next.js application
 exec node server.js

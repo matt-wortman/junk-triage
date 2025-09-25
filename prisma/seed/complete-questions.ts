@@ -1,9 +1,10 @@
 import { FieldType } from '@prisma/client';
+import { FormTemplateSeed } from './types';
 
 // Complete question structure based on questions_broken_out.txt
 // Field codes (F0.1, F1.1.a etc.) are for backend only - NOT displayed to users
 
-export const completeFormStructure = {
+export const completeFormStructure: FormTemplateSeed = {
   name: "CCHMC Technology Triage Form",
   version: "2.0.0",
   description: "Cincinnati Children's Hospital Medical Center technology triage evaluation form - Complete version",

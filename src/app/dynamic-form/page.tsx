@@ -9,7 +9,12 @@ import { FileText, Home } from 'lucide-react';
 import Link from 'next/link';
 import { FormEngineProvider, DynamicFormRenderer } from '@/lib/form-engine/renderer';
 import { DynamicFormNavigation } from '@/components/form/DynamicFormNavigation';
-import { FormTemplateWithSections, FormResponse, RepeatableGroupData } from '@/lib/form-engine/types';
+import {
+  FormTemplateWithSections,
+  FormResponse,
+  RepeatableGroupData,
+  CalculatedScores,
+} from '@/lib/form-engine/types';
 import { submitFormResponse, saveDraftResponse, loadDraftResponse } from './actions';
 import { toast } from 'sonner';
 
@@ -22,11 +27,11 @@ function DynamicFormContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(draftId);
-  const [initialFormData, setInitialFormData] = useState<{
-    responses: FormResponse;
-    repeatGroups: RepeatableGroupData;
-    calculatedScores: Record<string, number>;
-  } | null>(null);
+const [initialFormData, setInitialFormData] = useState<{
+  responses: FormResponse;
+  repeatGroups: RepeatableGroupData;
+  calculatedScores: Record<string, unknown>;
+} | null>(null);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -74,7 +79,11 @@ function DynamicFormContent() {
     loadTemplateAndDraft();
   }, [draftId, router]);
 
-  const handleSubmit = async (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => {
+  const handleSubmit = async (data: {
+    responses: FormResponse;
+    repeatGroups: RepeatableGroupData;
+    calculatedScores: CalculatedScores | null;
+  }) => {
     console.log('Form submitted:', data);
 
     if (isSubmitting) return; // Prevent double submission
@@ -87,11 +96,15 @@ function DynamicFormContent() {
         return;
       }
 
+      const normalizedScores: Record<string, unknown> = data.calculatedScores
+        ? { ...data.calculatedScores }
+        : {};
+
       const result = await submitFormResponse({
         templateId: template.id,
-        responses: data.responses,
-        repeatGroups: data.repeatGroups,
-        calculatedScores: data.calculatedScores,
+        responses: data.responses as Record<string, unknown>,
+        repeatGroups: data.repeatGroups as Record<string, unknown>,
+        calculatedScores: normalizedScores,
       });
 
       if (result.success) {
@@ -119,7 +132,11 @@ function DynamicFormContent() {
     }
   };
 
-  const handleSaveDraft = async (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => {
+  const handleSaveDraft = async (data: {
+    responses: FormResponse;
+    repeatGroups: RepeatableGroupData;
+    calculatedScores: CalculatedScores | null;
+  }) => {
     console.log('Draft saved:', data);
 
     if (isSavingDraft) return; // Prevent multiple save operations
@@ -132,12 +149,16 @@ function DynamicFormContent() {
         return;
       }
 
+      const normalizedScores: Record<string, unknown> = data.calculatedScores
+        ? { ...data.calculatedScores }
+        : {};
+
       const result = await saveDraftResponse(
         {
           templateId: template.id,
-          responses: data.responses,
-          repeatGroups: data.repeatGroups,
-          calculatedScores: data.calculatedScores,
+          responses: data.responses as Record<string, unknown>,
+          repeatGroups: data.repeatGroups as Record<string, unknown>,
+          calculatedScores: normalizedScores,
         },
         'anonymous', // TODO: Replace with actual user ID when auth is implemented
         currentDraftId || undefined
@@ -284,8 +305,20 @@ function DynamicFormContent() {
 
             {/* Dynamic Navigation */}
             <DynamicFormNavigation
-              onSubmit={handleSubmit}
-              onSaveDraft={handleSaveDraft}
+              onSubmit={(formData) =>
+                handleSubmit({
+                  responses: formData.responses as FormResponse,
+                  repeatGroups: formData.repeatGroups as RepeatableGroupData,
+                  calculatedScores: null,
+                })
+              }
+              onSaveDraft={(formData) =>
+                handleSaveDraft({
+                  responses: formData.responses as FormResponse,
+                  repeatGroups: formData.repeatGroups as RepeatableGroupData,
+                  calculatedScores: null,
+                })
+              }
               isSubmitting={isSubmitting}
               isSavingDraft={isSavingDraft}
             />

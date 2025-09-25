@@ -8,8 +8,8 @@ import { extractScoringInputs, calculateAllScores } from '@/lib/scoring/calculat
 
 interface DynamicScoringMatrixProps {
   question: FormQuestionWithDetails;
-  value: unknown;
-  onChange: (value: unknown) => void;
+  value?: unknown;
+  onChange?: (value: unknown) => void;
   error?: string;
   disabled?: boolean;
 }
@@ -40,13 +40,7 @@ function getMatrixPosition(impactScore: number, valueScore: number): { x: number
   return { x, y };
 }
 
-export function DynamicScoringMatrix({
-  question,
-  value,
-  onChange,
-  error,
-  disabled
-}: DynamicScoringMatrixProps) {
+export function DynamicScoringMatrix({ question, error }: DynamicScoringMatrixProps) {
   const { responses } = useFormEngine();
 
   // Extract scoring inputs and calculate scores

@@ -4,12 +4,13 @@ import { prisma } from '@/lib/prisma'
 import { SubmissionStatus, Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { FormResponse, RepeatableGroupData } from '@/lib/form-engine/types'
+import { formSubmissionPayloadSchema } from '@/lib/validation/form-submission'
 
 export interface FormSubmissionData {
   templateId: string
   responses: Record<string, unknown>
   repeatGroups: Record<string, unknown>
-  calculatedScores: unknown
+  calculatedScores?: Record<string, unknown>
 }
 
 export interface FormSubmissionResult {
@@ -26,12 +27,14 @@ export async function submitFormResponse(
   userId: string = 'anonymous'
 ): Promise<FormSubmissionResult> {
   try {
+    const payload = formSubmissionPayloadSchema.parse(data)
+
     // Start a database transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
       // Create the form submission
       const submission = await tx.formSubmission.create({
         data: {
-          templateId: data.templateId,
+          templateId: payload.templateId,
           submittedBy: userId,
           status: SubmissionStatus.SUBMITTED,
           submittedAt: new Date(),
@@ -39,11 +42,13 @@ export async function submitFormResponse(
       })
 
       // Store individual question responses
-      const responseEntries = Object.entries(data.responses).map(([questionCode, value]) => ({
-        submissionId: submission.id,
-        questionCode,
-        value: value as any,
-      }))
+      const responseEntries = Object.entries(payload.responses).map(
+        ([questionCode, value]) => ({
+          submissionId: submission.id,
+          questionCode,
+          value: value as Prisma.InputJsonValue,
+        })
+      )
 
       if (responseEntries.length > 0) {
         await tx.questionResponse.createMany({
@@ -52,17 +57,17 @@ export async function submitFormResponse(
       }
 
       // Store repeatable group responses
-      const repeatGroupEntries = Object.entries(data.repeatGroups).flatMap(([questionCode, rows]) => {
-        if (Array.isArray(rows)) {
-          return rows.map((rowData, index) => ({
-            submissionId: submission.id,
-            questionCode,
-            rowIndex: index,
-            data: rowData as any,
-          }))
-        }
-        return []
-      })
+      const repeatGroupEntries = Object.entries(payload.repeatGroups).flatMap(
+        ([questionCode, rows]) =>
+          Array.isArray(rows)
+            ? rows.map((rowData, index) => ({
+                submissionId: submission.id,
+                questionCode,
+                rowIndex: index,
+                data: rowData as Prisma.InputJsonValue,
+              }))
+            : []
+      )
 
       if (repeatGroupEntries.length > 0) {
         await tx.repeatableGroupResponse.createMany({
@@ -71,12 +76,14 @@ export async function submitFormResponse(
       }
 
       // Store calculated scores
-      if (data.calculatedScores && typeof data.calculatedScores === 'object') {
-        const scoreEntries = Object.entries(data.calculatedScores as Record<string, number>).map(([scoreType, value]) => ({
-          submissionId: submission.id,
-          scoreType,
-          value: Number(value) || 0,
-        }))
+      if (payload.calculatedScores && typeof payload.calculatedScores === 'object') {
+        const scoreEntries = Object.entries(payload.calculatedScores)
+          .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+          .map(([scoreType, value]) => ({
+            submissionId: submission.id,
+            scoreType,
+            value: Number(value),
+          }))
 
         if (scoreEntries.length > 0) {
           await tx.calculatedScore.createMany({
@@ -114,6 +121,8 @@ export async function saveDraftResponse(
   existingDraftId?: string
 ): Promise<FormSubmissionResult> {
   try {
+    const payload = formSubmissionPayloadSchema.parse(data)
+
     // Check if we're updating an existing draft
     if (existingDraftId) {
       const result = await prisma.$transaction(async (tx) => {
@@ -139,10 +148,10 @@ export async function saveDraftResponse(
         })
 
         // Recreate responses (same logic as submitFormResponse)
-        const responseEntries = Object.entries(data.responses).map(([questionCode, value]) => ({
+        const responseEntries = Object.entries(payload.responses).map(([questionCode, value]) => ({
           submissionId: submission.id,
           questionCode,
-          value: value as any,
+          value: value as Prisma.InputJsonValue,
         }))
 
         if (responseEntries.length > 0) {
@@ -151,13 +160,13 @@ export async function saveDraftResponse(
           })
         }
 
-        const repeatGroupEntries = Object.entries(data.repeatGroups).flatMap(([questionCode, rows]) => {
+        const repeatGroupEntries = Object.entries(payload.repeatGroups).flatMap(([questionCode, rows]) => {
           if (Array.isArray(rows)) {
             return rows.map((rowData, index) => ({
               submissionId: submission.id,
               questionCode,
               rowIndex: index,
-              data: rowData as any,
+              data: rowData as Prisma.InputJsonValue,
             }))
           }
           return []
@@ -169,12 +178,14 @@ export async function saveDraftResponse(
           })
         }
 
-        if (data.calculatedScores && typeof data.calculatedScores === 'object') {
-          const scoreEntries = Object.entries(data.calculatedScores as Record<string, number>).map(([scoreType, value]) => ({
-            submissionId: submission.id,
-            scoreType,
-            value: Number(value) || 0,
-          }))
+        if (payload.calculatedScores && typeof payload.calculatedScores === 'object') {
+          const scoreEntries = Object.entries(payload.calculatedScores)
+            .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+            .map(([scoreType, value]) => ({
+              submissionId: submission.id,
+              scoreType,
+              value: Number(value),
+            }))
 
           if (scoreEntries.length > 0) {
             await tx.calculatedScore.createMany({
@@ -197,16 +208,16 @@ export async function saveDraftResponse(
       const result = await prisma.$transaction(async (tx) => {
         const submission = await tx.formSubmission.create({
           data: {
-            templateId: data.templateId,
+            templateId: payload.templateId,
             submittedBy: userId,
             status: SubmissionStatus.DRAFT,
           },
         })
 
-        const responseEntries = Object.entries(data.responses).map(([questionCode, value]) => ({
+        const responseEntries = Object.entries(payload.responses).map(([questionCode, value]) => ({
           submissionId: submission.id,
           questionCode,
-          value: value as any,
+          value: value as Prisma.InputJsonValue,
         }))
 
         if (responseEntries.length > 0) {
@@ -215,13 +226,13 @@ export async function saveDraftResponse(
           })
         }
 
-        const repeatGroupEntries = Object.entries(data.repeatGroups).flatMap(([questionCode, rows]) => {
+        const repeatGroupEntries = Object.entries(payload.repeatGroups).flatMap(([questionCode, rows]) => {
           if (Array.isArray(rows)) {
             return rows.map((rowData, index) => ({
               submissionId: submission.id,
               questionCode,
               rowIndex: index,
-              data: rowData as any,
+              data: rowData as Prisma.InputJsonValue,
             }))
           }
           return []
@@ -233,12 +244,14 @@ export async function saveDraftResponse(
           })
         }
 
-        if (data.calculatedScores && typeof data.calculatedScores === 'object') {
-          const scoreEntries = Object.entries(data.calculatedScores as Record<string, number>).map(([scoreType, value]) => ({
-            submissionId: submission.id,
-            scoreType,
-            value: Number(value) || 0,
-          }))
+        if (payload.calculatedScores && typeof payload.calculatedScores === 'object') {
+          const scoreEntries = Object.entries(payload.calculatedScores)
+            .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+            .map(([scoreType, value]) => ({
+              submissionId: submission.id,
+              scoreType,
+              value: Number(value),
+            }))
 
           if (scoreEntries.length > 0) {
             await tx.calculatedScore.createMany({

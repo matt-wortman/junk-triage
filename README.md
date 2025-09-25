@@ -26,7 +26,16 @@ npx prisma dev          # Terminal 2: Database server
 - **Database**: Running on ports 51213-51215
 - **Prisma Studio** (optional): `npx prisma studio`
 
-### 2. Available Form Implementations
+### 2. Quality Checks
+
+```bash
+npm run lint         # ESLint + TypeScript-aware linting
+npm run type-check   # Strict TypeScript validation with tsc --noEmit
+npm run test -- custom-validation  # Targeted validation rule tests
+npm test -- demo-seeding # Prisma demo data integrity tests
+```
+
+### 3. Available Form Implementations
 
 **Two Completely Separate Form Systems:**
 
@@ -64,7 +73,7 @@ npx prisma dev          # Terminal 2: Database server
 - [x] **API integration** loading form structure from `/api/form-templates`
 - [x] **Field adapters**: text, select, scoring, checkbox, repeatable groups
 - [x] **Conditional logic engine** for field visibility
-- [x] **Seed data** with 9 sections and 18 basic questions (prototype)
+- [x] **Seed data** with structured F0–F6 sections and optional demo submissions
 
 ### 🔧 Phase 4: Enhanced Dynamic Forms (CURRENT PHASE)
 **Status**: Ready for implementation based on NEXT_STEPS.md
@@ -155,26 +164,37 @@ tech-triage-platform/
 │   │   │   ├── DigitalConsiderationsSection.tsx
 │   │   │   ├── ScoreRecommendationSection.tsx
 │   │   │   ├── SummarySection.tsx
-│   │   │   ├── ScoringComponent.tsx   # ✅ Shared by both systems
-│   │   │   └── DynamicFormNavigation.tsx # For dynamic form only
+│   │   │   ├── ScoringComponent.tsx   # Shared scoring UI
+│   │   │   └── DynamicFormNavigation.tsx # Guides database-driven flow
 │   │   └── ui/                        # shadcn/ui components (shared)
 │   └── lib/
 │       ├── prisma.ts                  # ✅ Database client
 │       ├── scoring.ts                 # ✅ Hardcoded form calculations
 │       ├── utils.ts                   # Utility functions
 │       └── form-engine/               # DATABASE-DRIVEN form system
+│           ├── index.ts               # Exports context + hooks
 │           ├── types.ts               # TypeScript definitions
-│           ├── renderer.tsx           # ✅ Dynamic form renderer
+│           ├── renderer.tsx           # Dynamic form renderer
 │           ├── conditional-logic.ts   # Field visibility rules
 │           ├── validation.ts          # Validation framework
+│           ├── json-utils.ts          # Repeatable group helpers
 │           ├── field-mappings-simple.ts
 │           └── fields/
-│               └── FieldAdapters.tsx  # ✅ Maps DB fields to UI
+│               └── FieldAdapters.tsx  # Maps DB fields to UI
 ├── prisma/
-│   ├── schema.prisma                  # ✅ Database schema
+│   ├── schema.prisma                  # Database schema
 │   ├── migrations/                    # Database version control
 │   └── seed/
-│       └── form-structure.ts          # ✅ Dynamic form seed data
+│       ├── index.ts                   # Orchestrates seeding pipeline
+│       ├── form-structure.ts          # Dynamic form seed data
+│       ├── demo-submissions.ts        # Demo submission generator
+│       ├── option-mapper.ts           # Canonical option lookups
+│       ├── prisma-factory.ts          # Shared Prisma client creator
+│       └── types.ts                   # Seed-specific typings
+├── scripts/
+│   ├── start.sh                       # Docker entrypoint
+│   ├── create-synthetic-submissions.ts # Generate large demo datasets
+│   └── verify-demo-data.ts            # Validates seeded demo data
 ├── NEXT_STEPS.md                      # Development roadmap
 ├── IMPLEMENTATION_PLAN.md             # Detailed Phase 4 plan
 ├── CLAUDE.md                          # Project context & history
@@ -361,7 +381,7 @@ npx playwright test     # Run E2E tests
 # Database operations
 npx prisma generate     # Generate TypeScript client
 npx prisma migrate dev  # Create and apply migrations
-npm run seed            # Reset database with fresh data
+npm run db:seed         # Reset database with fresh data
 npx prisma studio       # Visual database browser
 ```
 
@@ -369,7 +389,7 @@ npx prisma studio       # Visual database browser
 ```bash
 # Fresh database setup
 npx prisma migrate reset    # ⚠️ Destroys all data
-npm run seed               # Populates with test data
+npm run db:seed            # Populates with test data
 
 # Production deployment
 npx prisma migrate deploy  # Apply migrations to production
@@ -449,16 +469,59 @@ Based on NEXT_STEPS.md roadmap:
 ## 🔧 Environment & Configuration
 
 ### **Required Environment Variables**
+Copy `.env.example` to `.env.local` and update values:
 ```env
-DATABASE_URL="prisma+postgres://localhost:51213/?api_key=..."  # Auto-generated by Prisma
+# Database (auto-generated by Prisma dev server)
+DATABASE_URL="prisma+postgres://localhost:51213/?api_key=..."
+
+# Demo data configuration (default: true for new installations)
+SEED_DEMO_DATA=true    # Include 4 sample submissions
+# SEED_DEMO_DATA=false # Clean database for production
 ```
 
 ### **Local Development Setup**
 1. **Install dependencies**: `npm install`
-2. **Start database**: `npx prisma dev` (background process)
-3. **Start web server**: `npm run dev`
-4. **Seed database**: `npm run seed` (if first time)
+2. **Configure environment**: `cp .env.example .env.local`
+3. **Start database**: `npx prisma dev` (background process, includes demo data by default)
+4. **Start web server**: `npm run dev`
 5. **Open browser**: http://localhost:3000
+
+### **Demo Data Control**
+The seeding pipeline in `prisma/seed/index.ts` now supports configurable demo submissions and repeatable verification:
+
+**Fast local resets:**
+```bash
+npm run db:seed                     # Seeds structure + demo submissions by default
+SEED_DEMO_DATA=false npm run db:seed # Seeds structure only (clean database)
+```
+
+**Development Mode (default):**
+```bash
+SEED_DEMO_DATA=true npm run dev   # Starts app + Prisma with demo data hydrated
+```
+
+**Production Mode:**
+```bash
+SEED_DEMO_DATA=false npm run dev  # Runs without inserting demo submissions
+```
+
+**Docker Environment:**
+```bash
+docker-compose up -d                                # Includes demo data by default
+SEED_DEMO_DATA=false docker-compose up -d          # Clean production database
+```
+
+**Verification & tooling:**
+```bash
+npx tsx scripts/verify-demo-data.ts        # Validates seeded submissions + score types
+npx tsx scripts/create-synthetic-submissions.ts # Generates large synthetic datasets on demand
+```
+
+**Sample Demo Data Included:**
+- ✅ Smart Insulin Pump (High Impact/High Value → Proceed)
+- ✅ VR Pain Therapy (Medium Impact/Medium Value → Alternative Pathway)
+- ✅ Rapid Genetic Screening (High Impact/Low Value → Consider Alternative)
+- 📝 AI Radiology Assistant (Draft submission, partially completed)
 
 ### **Troubleshooting**
 ```bash

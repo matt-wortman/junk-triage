@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Save, Send } from 'lucide-react';
 import { useFormEngine } from '@/lib/form-engine/renderer';
 import { shouldShowField, shouldRequireField, parseConditionalConfig } from '@/lib/form-engine/conditional-logic';
 import { ValidationRule } from '@/lib/form-engine/types';
+import { parseValidationMetadata } from '@/lib/form-engine/json-utils';
 
 interface DynamicFormNavigationProps {
   onSaveDraft?: (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => void;
@@ -77,17 +78,14 @@ export function DynamicFormNavigation({ onSaveDraft, onSubmit, isSubmitting = fa
         let errorMessage = `${question.label} is required`;
 
         if (question.validation) {
-          try {
-            const validationRules = typeof question.validation === 'string'
-              ? JSON.parse(question.validation)
-              : question.validation;
+          const validationMetadata = parseValidationMetadata(question.validation);
+          const rules = Array.isArray(validationMetadata?.rules)
+            ? (validationMetadata?.rules as ValidationRule[])
+            : [];
 
-            const requiredRule = validationRules?.rules?.find((rule: ValidationRule) => rule.type === 'required');
-            if (requiredRule?.message) {
-              errorMessage = requiredRule.message;
-            }
-          } catch (_e) {
-            // Use default message if validation parsing fails
+          const requiredRule = rules.find((rule) => rule.type === 'required');
+          if (requiredRule?.message) {
+            errorMessage = requiredRule.message;
           }
         }
 

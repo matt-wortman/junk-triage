@@ -1,4 +1,5 @@
 import { ConditionalRule, ConditionalConfig, FormResponse } from './types';
+import { parseConditionalConfigValue } from './json-utils';
 
 /**
  * Evaluates a single conditional rule against the current form responses
@@ -185,42 +186,7 @@ export const ConditionalHelpers = {
  */
 export function parseConditionalConfig(conditionalJson: unknown): ConditionalConfig | null {
   try {
-    if (!conditionalJson) return null;
-
-    let config: unknown;
-
-    // If it's already parsed
-    if (typeof conditionalJson === 'object' && conditionalJson !== null) {
-      config = conditionalJson;
-    }
-    // If it's a JSON string
-    else if (typeof conditionalJson === 'string') {
-      config = JSON.parse(conditionalJson);
-    } else {
-      return null;
-    }
-
-    // Handle simplified format from seed data: { showIf: [...] }
-    if (config && typeof config === 'object' && 'showIf' in config && Array.isArray((config as any).showIf)) {
-      const rules: ConditionalRule[] = (config as any).showIf.map((condition: Record<string, unknown>) => ({
-        field: condition.field,
-        operator: condition.operator,
-        value: condition.value,
-        action: 'show'
-      }));
-
-      return {
-        rules,
-        logic: 'OR' // Default to OR for show conditions
-      };
-    }
-
-    // Handle full format: { rules: [...], logic: "AND|OR" }
-    if (config && typeof config === 'object' && 'rules' in config && Array.isArray((config as any).rules)) {
-      return config as ConditionalConfig;
-    }
-
-    return null;
+    return parseConditionalConfigValue(conditionalJson);
   } catch (error) {
     console.error('Error parsing conditional config:', error);
     return null;

@@ -19,6 +19,7 @@ import { validateField } from '../validation/form-schemas';
 import { extractScoringInputs, calculateAllScores } from '../scoring/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { isInfoBoxMetadata, parseValidationMetadata } from './json-utils';
 
 // Form state reducer
 function formReducer(state: FormState, action: FormAction): FormState {
@@ -310,21 +311,8 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
   }
 
   // Check if this is an info box
-  let validationObj = question.validation;
-
-  // Parse validation if it's a string
-  if (typeof question.validation === 'string') {
-    try {
-      validationObj = JSON.parse(question.validation);
-    } catch (_e) {
-      validationObj = {};
-    }
-  }
-
-  const isInfoBox = validationObj &&
-    typeof validationObj === 'object' &&
-    'isInfoBox' in validationObj &&
-    validationObj.isInfoBox;
+  const validationMetadata = parseValidationMetadata(question.validation);
+  const isInfoBox = isInfoBoxMetadata(validationMetadata);
 
   // Debug logging for Key Alignment Areas
   if (question.fieldCode === 'F2.1.info') {
@@ -332,7 +320,7 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
       fieldCode: question.fieldCode,
       label: question.label,
       validation: question.validation,
-      isInfoBox: isInfoBox,
+      isInfoBox,
       type: question.type,
       conditional: question.conditional,
       conditionalConfig: conditionalConfig,

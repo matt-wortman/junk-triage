@@ -9,33 +9,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScoringComponent } from '@/components/form/ScoringComponent';
 import { DynamicScoringMatrix } from '@/components/form/DynamicScoringMatrix';
 import { FieldProps } from '../types';
+import {
+  getInfoBoxStyle,
+  isInfoBoxMetadata,
+  parseValidationMetadata,
+} from '../json-utils';
 import { Trash2, Plus } from 'lucide-react';
 
 // Short text field adapter
 const ShortTextFieldComponent: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   // ✅ MEMOIZE validation parsing to prevent re-parsing on every render
-  const { isInfoBox, validationObj } = useMemo(() => {
-    let validationObj = question.validation;
-
-    // Parse validation if it's a string (same logic as renderer)
-    if (typeof question.validation === 'string') {
-      try {
-        validationObj = JSON.parse(question.validation);
-      } catch (_e) {
-        validationObj = {};
-      }
-    }
-
-    const isInfoBox = validationObj &&
-      typeof validationObj === 'object' &&
-      'isInfoBox' in validationObj &&
-      validationObj.isInfoBox;
-
-    return { isInfoBox, validationObj };
+  const { isInfoBox, metadata } = useMemo(() => {
+    const validationMetadata = parseValidationMetadata(question.validation);
+    return {
+      isInfoBox: isInfoBoxMetadata(validationMetadata),
+      metadata: validationMetadata,
+    };
   }, [question.validation]);
 
-  if (isInfoBox && validationObj) {
-    const infoBoxStyle = (validationObj as any).infoBoxStyle || 'blue';
+  if (isInfoBox) {
+    const infoBoxStyle = getInfoBoxStyle(metadata);
     const styleClasses = infoBoxStyle === 'blue'
       ? 'bg-blue-50 border-blue-200 text-blue-800'
       : 'bg-gray-50 border-gray-200 text-gray-800';

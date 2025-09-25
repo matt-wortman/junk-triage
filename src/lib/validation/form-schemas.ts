@@ -75,7 +75,7 @@ export function getFieldValidationSchema(
   fieldCode: string,
   fieldType: FieldType,
   isRequired: boolean,
-  _customValidation?: ValidationConfig
+  customValidation?: ValidationConfig
 ): z.ZodSchema {
   // Check for specific field validation first
   if (specificFieldValidations[fieldCode as keyof typeof specificFieldValidations]) {
@@ -94,11 +94,11 @@ export function getFieldValidationSchema(
   }
 
   // Use required or optional schema based on field requirements
-  if (isRequired) {
-    return fieldValidationSchemas[fieldType];
-  } else {
-    return optionalFieldValidationSchemas[fieldType];
-  }
+  const baseSchema = isRequired
+    ? fieldValidationSchemas[fieldType]
+    : optionalFieldValidationSchemas[fieldType];
+
+  return applyCustomValidationRules(baseSchema, fieldType, customValidation?.rules ?? []);
 }
 
 /**
@@ -109,10 +109,10 @@ export function validateField(
   fieldType: FieldType,
   value: unknown,
   isRequired: boolean,
-  _customValidation?: ValidationConfig
+  customValidation?: ValidationConfig
 ): { isValid: boolean; error?: string } {
   try {
-    const schema = getFieldValidationSchema(fieldCode, fieldType, isRequired, _customValidation);
+    const schema = getFieldValidationSchema(fieldCode, fieldType, isRequired, customValidation);
     schema.parse(value);
     return { isValid: true };
   } catch (error) {
@@ -191,8 +191,112 @@ export function useFieldValidation(
   fieldType: FieldType,
   value: unknown,
   isRequired: boolean,
-  _customValidation?: ValidationConfig
+  customValidation?: ValidationConfig
 ) {
-  const result = validateField(fieldCode, fieldType, value, isRequired, _customValidation);
+  const result = validateField(fieldCode, fieldType, value, isRequired, customValidation);
   return result;
+}
+
+function applyCustomValidationRules<T extends z.ZodTypeAny>(
+  schema: T,
+  fieldType: FieldType,
+  rules: ValidationConfig['rules']
+): z.ZodTypeAny {
+  if (!rules || rules.length === 0) {
+    return schema;
+  }
+
+  let currentSchema: z.ZodTypeAny = schema;
+  for (const rule of rules) {
+    currentSchema = applyValidationRule(currentSchema, fieldType, rule);
+  }
+  return currentSchema;
+}
+
+function applyValidationRule(schema: z.ZodTypeAny, fieldType: FieldType, rule: ValidationConfig['rules'][number]): z.ZodTypeAny {
+  const message = rule.message || 'Invalid value';
+
+  switch (rule.type) {
+    case 'required':
+      return schema.refine((value) => !isEmptyValue(value), { message });
+
+    case 'min': {
+      const threshold = Number(rule.value ?? 0);
+      if (isNumericFieldType(fieldType)) {
+        return schema.refine((value) =>
+          isEmptyValue(value) || (typeof value === 'number' ? value >= threshold : Number(value) >= threshold),
+        { message }
+        );
+      }
+
+      return schema.refine((value) => {
+        if (isEmptyValue(value)) return true;
+        if (typeof value === 'string') return value.length >= threshold;
+        if (Array.isArray(value)) return value.length >= threshold;
+        return true;
+      }, { message });
+    }
+
+    case 'max': {
+      const threshold = Number(rule.value ?? 0);
+      if (isNumericFieldType(fieldType)) {
+        return schema.refine((value) =>
+          isEmptyValue(value) || (typeof value === 'number' ? value <= threshold : Number(value) <= threshold),
+        { message }
+        );
+      }
+
+      return schema.refine((value) => {
+        if (isEmptyValue(value)) return true;
+        if (typeof value === 'string') return value.length <= threshold;
+        if (Array.isArray(value)) return value.length <= threshold;
+        return true;
+      }, { message });
+    }
+
+    case 'pattern': {
+      if (typeof rule.value !== 'string') {
+        return schema;
+      }
+      const regex = new RegExp(rule.value);
+      return schema.refine((value) => isEmptyValue(value) || (typeof value === 'string' && regex.test(value)), { message });
+    }
+
+    case 'email': {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return schema.refine((value) => isEmptyValue(value) || (typeof value === 'string' && emailRegex.test(value)), { message });
+    }
+
+    case 'url': {
+      return schema.refine((value) => {
+        if (isEmptyValue(value)) return true;
+        if (typeof value !== 'string') return false;
+        try {
+          new URL(value);
+          return true;
+        } catch {
+          return false;
+        }
+      }, { message });
+    }
+
+    case 'number': {
+      return schema.refine((value) => isEmptyValue(value) || typeof value === 'number', { message });
+    }
+
+    case 'custom':
+      // Custom validators are not implemented in this layer; allow downstream hooks to handle them.
+      return schema;
+
+    default:
+      return schema;
+  }
+}
+
+function isNumericFieldType(fieldType: FieldType): boolean {
+  return fieldType === FieldType.INTEGER || fieldType === FieldType.SCORING_0_3;
+}
+
+function isEmptyValue(value: unknown): boolean {
+  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 }
