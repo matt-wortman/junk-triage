@@ -4,7 +4,8 @@ set -e
 echo "🚀 Starting Tech Triage Platform..."
 
 echo "⏳ Waiting for database to be ready..."
-until npx prisma migrate deploy >/dev/null 2>&1; do
+MIGRATE_URL="${PRISMA_MIGRATE_DATABASE_URL:-$DATABASE_URL}"
+until DATABASE_URL="$MIGRATE_URL" npx prisma migrate deploy >/dev/null 2>&1; do
   echo "Database not ready, retrying in 5 seconds..."
   sleep 5
 done

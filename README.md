@@ -2,6 +2,15 @@
 
 A sophisticated web application that digitalizes the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage evaluation process. Built with a modern, database-driven architecture supporting both hardcoded and dynamic form implementations.
 
+## 📌 Status Snapshot (2025-09-25)
+- Full report: `STATUS-2025-09-25.md`
+- Local Docker: `docker compose up --build` runs app + Postgres; health at `/api/health`
+- DB roles: `triage_migrator` (migrations), `triage_app` (runtime DML)
+- Image: `innovationventures.azurecr.io/tech-triage-platform:prod`
+- Azure: ACI setup in progress; ensure `DATABASE_URL`/`PRISMA_MIGRATE_DATABASE_URL` target a real Postgres (managed or ACI sidecar)
+- Secrets: move production values to ACI/Key Vault; rotate before go‑live
+- Next steps: choose DB hosting (managed vs. sidecar), wire HTTPS, enable monitoring, disable demo seed in prod
+
 ## 🚀 Quick Start
 
 ### Prerequisites

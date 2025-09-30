@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "prisma:dev": "dotenv -e .env.prisma-dev -- npx prisma dev",
+    "dev": "dotenv -e .env.prisma-dev -- next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
@@ -11,7 +12,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "db:seed": "tsx prisma/seed/index.ts"
+    "studio": "dotenv -e .env.prisma-dev -- npx prisma studio",
+    "db:seed": "tsx prisma/seed/index.ts",
+    "db:seed:dev": "dotenv -e .env.prisma-dev -- tsx prisma/seed/index.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed/index.ts"
@@ -39,6 +42,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tsx": "^4.20.5",
     "zod": "^4.1.11"
   },
   "devDependencies": {
@@ -51,12 +55,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
     "jest": "^30.1.3",
     "jest-environment-jsdom": "^30.1.2",
     "tailwindcss": "^4",
-    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }
