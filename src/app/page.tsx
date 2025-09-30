@@ -43,7 +43,7 @@ export default function Home() {
               <p className="text-xl text-blue-100">
                 Streamline your technology evaluation process
               </p>
-              <Link href="/form">
+              <Link href="/dynamic-form">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   Start Evaluation
                 </Button>
