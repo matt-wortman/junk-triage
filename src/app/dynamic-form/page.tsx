@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Home } from 'lucide-react';
+import { FileText, Hammer, Home } from 'lucide-react';
 import Link from 'next/link';
 import { FormEngineProvider, DynamicFormRenderer } from '@/lib/form-engine/renderer';
 import { DynamicFormNavigation } from '@/components/form/DynamicFormNavigation';
@@ -257,6 +257,12 @@ const [initialFormData, setInitialFormData] = useState<{
                 <Button variant="outline" size="sm">
                   <FileText className="mr-2 h-4 w-4" />
                   My Drafts
+                </Button>
+              </Link>
+              <Link href="/dynamic-form/builder">
+                <Button variant="ghost" size="sm">
+                  <Hammer className="mr-2 h-4 w-4" />
+                  Builder
                 </Button>
               </Link>
               <Link href="/">

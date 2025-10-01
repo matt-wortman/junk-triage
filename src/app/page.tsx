@@ -24,6 +24,9 @@ export default function Home() {
               <Link href="/contact" className="text-muted-foreground hover:text-foreground">
                 Contact
               </Link>
+              <Link href="/dynamic-form/builder" className="text-muted-foreground hover:text-foreground">
+                Builder
+              </Link>
               <Button>Login</Button>
             </div>
           </div>
