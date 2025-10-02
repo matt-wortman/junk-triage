@@ -399,6 +399,22 @@ export async function getUserDrafts(userId: string = 'anonymous') {
           select: {
             name: true,
             version: true,
+            sections: {
+              select: {
+                questions: {
+                  select: {
+                    fieldCode: true,
+                    label: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          select: {
+            questionCode: true,
+            value: true,
           },
         },
       },
@@ -409,13 +425,40 @@ export async function getUserDrafts(userId: string = 'anonymous') {
 
     return {
       success: true,
-      drafts: drafts.map((draft) => ({
-        id: draft.id,
-        templateName: draft.template.name,
-        templateVersion: draft.template.version,
-        createdAt: draft.createdAt,
-        updatedAt: draft.updatedAt,
-      })),
+      drafts: drafts.map((draft) => {
+        const technologyIdCodes = new Set<string>()
+        draft.template.sections.forEach((section) => {
+          section.questions.forEach((question) => {
+            const label = question.label.toLowerCase()
+            if (label.includes('technology id')) {
+              technologyIdCodes.add(question.fieldCode)
+            }
+          })
+        })
+
+        let draftName: string | undefined
+        if (technologyIdCodes.size > 0) {
+          const techIdResponse = draft.responses.find((response) =>
+            technologyIdCodes.has(response.questionCode)
+          )
+          if (techIdResponse) {
+            const rawValue = techIdResponse.value
+            if (typeof rawValue === 'string') {
+              draftName = rawValue.trim()
+            } else if (typeof rawValue === 'number') {
+              draftName = String(rawValue)
+            }
+          }
+        }
+
+        return {
+          id: draft.id,
+          templateName: draftName && draftName.length > 0 ? draftName : draft.template.name,
+          templateVersion: draft.template.version,
+          createdAt: draft.createdAt,
+          updatedAt: draft.updatedAt,
+        }
+      }),
     }
   } catch (error) {
     console.error('Error fetching drafts:', error)

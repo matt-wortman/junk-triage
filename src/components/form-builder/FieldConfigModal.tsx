@@ -135,13 +135,17 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
 
     startTransition(async () => {
       try {
-        await updateField(field.id, {
+        const result = await updateField(field.id, {
           label: labelValue.trim(),
           helpText: helpTextValue.trim() || undefined,
           placeholder: placeholderValue.trim() || undefined,
           isRequired,
           options: optionPayload,
         })
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Field updated')
         onSaved()
       } catch (error) {

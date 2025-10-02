@@ -52,11 +52,15 @@ export function TemplateSettingsModal({ template, open, onOpenChange }: Template
 
     startTransition(async () => {
       try {
-        await updateTemplateMetadata(template.id, {
+        const result = await updateTemplateMetadata(template.id, {
           name: name.trim(),
           version: version.trim(),
           description: description.trim() || undefined,
         })
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Template settings updated')
         onOpenChange(false)
         router.refresh()

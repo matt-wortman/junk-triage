@@ -40,7 +40,11 @@ export function FieldCard({ question, isFirst, isLast, disabled = false }: Field
   const handleMove = (direction: 'up' | 'down') => {
     startTransition(async () => {
       try {
-        await moveField(question.id, direction)
+        const result = await moveField(question.id, direction)
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         router.refresh()
       } catch (error) {
         console.error('Failed to move field', error)
@@ -52,7 +56,11 @@ export function FieldCard({ question, isFirst, isLast, disabled = false }: Field
   const handleDuplicate = () => {
     startTransition(async () => {
       try {
-        await duplicateField(question.id)
+        const result = await duplicateField(question.id)
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Field duplicated')
         router.refresh()
       } catch (error) {
@@ -65,7 +73,11 @@ export function FieldCard({ question, isFirst, isLast, disabled = false }: Field
   const handleDelete = () => {
     startTransition(async () => {
       try {
-        await deleteField(question.id)
+        const result = await deleteField(question.id)
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Field deleted')
         router.refresh()
       } catch (error) {

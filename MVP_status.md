@@ -33,6 +33,7 @@
 - Phase 6 (Field Management UI)
   - Added server actions to reorder, duplicate, and delete fields.
   - Field cards now expose Edit / Move / Duplicate / Delete controls with confirmations and toasts.
+  - Draft list now displays the captured “Technology ID” value when available for quicker identification.
 - Phase 7 (Preview Mode)
   - Added preview toggle to the builder detail page with tabbed Edit/Preview buttons.
   - Preview renders the existing `DynamicFormRenderer` + navigation inside a read-only card with stubbed submit/save handlers.
@@ -42,12 +43,21 @@
 - Phase 9 (Template Metadata)
   - Added `updateTemplateMetadata` server action so name/version/description can be tuned after creation.
   - Introduced `TemplateSettingsModal` with gear menu in the builder header for quick metadata edits.
+- Phase 10 (Polish & Error Handling)
+  - Added loading.tsx and error.tsx boundaries to builder routes for better UX
+  - Implemented comprehensive error handling throughout builder actions
+  - Added loading states and error toasts to all async operations
+  - Enhanced form validation with better error messages
+  - Improved empty states and user guidance
+  - Refactored large files for better maintainability
 
 ## In Progress
 - Nothing currently in progress.
 
 ## Upcoming
-- Phase 10: Polish & error handling (loading states, error toasts, skeletons).
+- Phase 11: Integration testing with form renderer
+- Phase 12: Testing & validation (manual testing checklist)
+- Phase 13: Documentation & inline help
 
 ## Notes
 - No schema changes or new migrations were required for Phase 0.

@@ -42,12 +42,6 @@ type ActionResult<T = void> =
   | { success: true; data?: T }
   | { success: false; error: string }
 
-const templateMetadataSchema = z.object({
-  name: z.string().min(1, 'Template name is required'),
-  version: z.string().min(1, 'Version is required'),
-  description: z.string().max(2000).optional(),
-})
-
 export async function getTemplates() {
   return prisma.formTemplate.findMany({
     include: {
@@ -125,84 +119,123 @@ export async function createSection(templateId: string, input: SectionInput): Pr
   }
 }
 
-export async function updateSection(sectionId: string, input: SectionInput) {
-  const parsedId = idSchema.parse(sectionId)
-  const parsedInput = sectionContentSchema.parse(input)
+export async function updateSection(sectionId: string, input: SectionInput): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(sectionId)
+    const parsedInput = sectionContentSchema.parse(input)
 
-  const section = await prisma.formSection.update({
-    where: { id: parsedId },
-    data: {
-      title: parsedInput.title,
-      description: parsedInput.description,
-      code: parsedInput.code,
-    },
-  })
+    const section = await prisma.formSection.update({
+      where: { id: parsedId },
+      data: {
+        title: parsedInput.title,
+        description: parsedInput.description,
+        code: parsedInput.code,
+      },
+    })
 
-  await invalidateTemplate(section.templateId)
-  return section
+    await invalidateTemplate(section.templateId)
+    return { success: true }
+  } catch (error) {
+    console.error('updateSection failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to update section',
+    }
+  }
 }
 
-export async function deleteSection(sectionId: string) {
-  const parsedId = idSchema.parse(sectionId)
-  const deleted = await prisma.formSection.delete({ where: { id: parsedId } })
-  await invalidateTemplate(deleted.templateId)
+export async function deleteSection(sectionId: string): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(sectionId)
+    const deleted = await prisma.formSection.delete({ where: { id: parsedId } })
+    await invalidateTemplate(deleted.templateId)
+    return { success: true }
+  } catch (error) {
+    console.error('deleteSection failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to delete section',
+    }
+  }
 }
 
-export async function reorderSections(templateId: string, orderedIds: string[]) {
-  const parsedId = idSchema.parse(templateId)
-  if (orderedIds.length === 0) return
+export async function reorderSections(templateId: string, orderedIds: string[]): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(templateId)
+    if (orderedIds.length === 0) {
+      return { success: true }
+    }
 
-  await prisma.$transaction(
-    orderedIds.map((sectionId, index) =>
-      prisma.formSection.update({
-        where: { id: sectionId },
-        data: { order: index + 1, templateId: parsedId },
-      })
+    await prisma.$transaction(
+      orderedIds.map((sectionId, index) =>
+        prisma.formSection.update({
+          where: { id: sectionId },
+          data: { order: index + 1, templateId: parsedId },
+        })
+      )
     )
-  )
-  await invalidateTemplate(parsedId)
+    await invalidateTemplate(parsedId)
+    return { success: true }
+  } catch (error) {
+    console.error('reorderSections failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to reorder sections',
+    }
+  }
 }
 
-export async function moveSection(sectionId: string, direction: 'up' | 'down') {
-  const parsedId = idSchema.parse(sectionId)
-  const section = await prisma.formSection.findUnique({
-    where: { id: parsedId },
-    select: {
-      id: true,
-      templateId: true,
-      order: true,
-    },
-  })
+export async function moveSection(sectionId: string, direction: 'up' | 'down'): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(sectionId)
+    const section = await prisma.formSection.findUnique({
+      where: { id: parsedId },
+      select: {
+        id: true,
+        templateId: true,
+        order: true,
+      },
+    })
 
-  if (!section) return
+    if (!section) {
+      return { success: false, error: 'Section not found' }
+    }
 
-  const comparator = direction === 'up' ? 'desc' : 'asc'
-  const orderFilter = direction === 'up'
-    ? { lt: section.order }
-    : { gt: section.order }
+    const comparator = direction === 'up' ? 'desc' : 'asc'
+    const orderFilter = direction === 'up' ? { lt: section.order } : { gt: section.order }
 
-  const adjacent = await prisma.formSection.findFirst({
-    where: {
-      templateId: section.templateId,
-      order: orderFilter,
-    },
-    orderBy: { order: comparator },
-  })
+    const adjacent = await prisma.formSection.findFirst({
+      where: {
+        templateId: section.templateId,
+        order: orderFilter,
+      },
+      orderBy: { order: comparator },
+    })
 
-  if (!adjacent) return
+    if (!adjacent) {
+      return { success: true }
+    }
 
-  await prisma.$transaction([
-    prisma.formSection.update({
-      where: { id: section.id },
-      data: { order: adjacent.order },
-    }),
-    prisma.formSection.update({
-      where: { id: adjacent.id },
-      data: { order: section.order },
-    }),
-  ])
+    await prisma.$transaction([
+      prisma.formSection.update({
+        where: { id: section.id },
+        data: { order: adjacent.order },
+      }),
+      prisma.formSection.update({
+        where: { id: adjacent.id },
+        data: { order: section.order },
+      }),
+    ])
 
-  await invalidateTemplate(section.templateId)
+    await invalidateTemplate(section.templateId)
+    return { success: true }
+  } catch (error) {
+    console.error('moveSection failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to move section',
+    }
+  }
 }
 
 export type FieldInput = {
@@ -212,353 +245,425 @@ export type FieldInput = {
 
 export type FieldUpdateInput = z.infer<typeof fieldUpdateSchema>
 export type TemplateMetadataInput = z.infer<typeof templateMetadataSchema>
-export type TemplateMetadataInput = z.infer<typeof templateMetadataSchema>
+export async function createField(sectionId: string, input: FieldInput): Promise<ActionResult> {
+  try {
+    const parsedSectionId = idSchema.parse(sectionId)
 
-export async function createField(sectionId: string, input: FieldInput) {
-  const parsedSectionId = idSchema.parse(sectionId)
-
-  const section = await prisma.formSection.findUnique({
-    where: { id: parsedSectionId },
-    include: {
-      template: {
-        select: {
-          id: true,
-          sections: {
-            include: {
-              questions: {
-                select: {
-                  id: true,
-                  fieldCode: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      questions: {
-        orderBy: { order: 'desc' },
-        select: {
-          order: true,
-        },
-      },
-    },
-  })
-
-  if (!section || !section.template) {
-    throw new Error('Section not found')
-  }
-
-  const nextOrder = (section.questions[0]?.order ?? 0) + 1
-  const allFieldCodes = section.template.sections.flatMap((sec) => sec.questions.map((q) => q.fieldCode))
-
-  const baseCode = `${section.code}.${nextOrder}`
-  let uniqueCode = baseCode
-  let counter = 1
-  while (allFieldCodes.includes(uniqueCode)) {
-    uniqueCode = `${baseCode}.${counter}`
-    counter += 1
-  }
-
-  const fallbackLabel = input.type
-    .toLowerCase()
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-
-  const field = await prisma.formQuestion.create({
-    data: {
-      sectionId: parsedSectionId,
-      type: input.type,
-      label: input.label ?? `${fallbackLabel} field`,
-      fieldCode: uniqueCode,
-      order: nextOrder,
-      isRequired: false,
-    },
-  })
-
-  await invalidateTemplate(section.template.id)
-  return field
-}
-
-export async function updateField(fieldId: string, input: FieldUpdateInput) {
-  const parsedId = idSchema.parse(fieldId)
-  const parsedInput = fieldUpdateSchema.parse(input)
-
-  const question = await prisma.formQuestion.findUnique({
-    where: { id: parsedId },
-    select: {
-      id: true,
-      type: true,
-      section: {
-        select: {
-          templateId: true,
-        },
-      },
-    },
-  })
-
-  if (!question) {
-    throw new Error('Field not found')
-  }
-
-  const selectionTypes = new Set<FieldType>([
-    FieldType.SINGLE_SELECT,
-    FieldType.CHECKBOX_GROUP,
-    FieldType.MULTI_SELECT,
-  ])
-
-  await prisma.$transaction(async (tx) => {
-    await tx.formQuestion.update({
-      where: { id: parsedId },
-      data: {
-        label: parsedInput.label,
-        helpText: parsedInput.helpText,
-        placeholder: parsedInput.placeholder,
-        isRequired: parsedInput.isRequired ?? false,
-      },
-    })
-
-    if (selectionTypes.has(question.type)) {
-      await tx.questionOption.deleteMany({ where: { questionId: parsedId } })
-
-      if (parsedInput.options && parsedInput.options.length > 0) {
-        await tx.questionOption.createMany({
-          data: parsedInput.options.map((option, index) => ({
-            questionId: parsedId,
-            label: option.label,
-            value: option.value,
-            order: index + 1,
-          })),
-        })
-      }
-    }
-  })
-
-  await invalidateTemplate(question.section.templateId)
-}
-
-export async function deleteField(fieldId: string) {
-  const parsedId = idSchema.parse(fieldId)
-
-  const deleted = await prisma.formQuestion.delete({
-    where: { id: parsedId },
-    include: {
-      section: {
-        select: {
-          templateId: true,
-        },
-      },
-    },
-  })
-
-  await invalidateTemplate(deleted.section.templateId)
-}
-
-export async function moveField(fieldId: string, direction: 'up' | 'down') {
-  const parsedId = idSchema.parse(fieldId)
-
-  const field = await prisma.formQuestion.findUnique({
-    where: { id: parsedId },
-    select: {
-      id: true,
-      order: true,
-      sectionId: true,
-      section: {
-        select: {
-          templateId: true,
-        },
-      },
-    },
-  })
-
-  if (!field) return
-
-  const comparator = direction === 'up' ? 'desc' : 'asc'
-  const orderFilter = direction === 'up' ? { lt: field.order } : { gt: field.order }
-
-  const adjacent = await prisma.formQuestion.findFirst({
-    where: {
-      sectionId: field.sectionId,
-      order: orderFilter,
-    },
-    orderBy: { order: comparator },
-  })
-
-  if (!adjacent) return
-
-  await prisma.$transaction([
-    prisma.formQuestion.update({
-      where: { id: field.id },
-      data: { order: adjacent.order },
-    }),
-    prisma.formQuestion.update({
-      where: { id: adjacent.id },
-      data: { order: field.order },
-    }),
-  ])
-
-  await invalidateTemplate(field.section.templateId)
-}
-
-export async function duplicateField(fieldId: string) {
-  const parsedId = idSchema.parse(fieldId)
-
-  const question = await prisma.formQuestion.findUnique({
-    where: { id: parsedId },
-    include: {
-      section: {
-        include: {
-          template: {
-            select: {
-              id: true,
-              sections: {
-                include: {
-                  questions: {
-                    select: {
-                      fieldCode: true,
-                    },
+    const section = await prisma.formSection.findUnique({
+      where: { id: parsedSectionId },
+      include: {
+        template: {
+          select: {
+            id: true,
+            sections: {
+              include: {
+                questions: {
+                  select: {
+                    id: true,
+                    fieldCode: true,
                   },
                 },
               },
             },
           },
-          questions: {
-            orderBy: { order: 'desc' },
-            select: {
-              order: true,
-            },
+        },
+        questions: {
+          orderBy: { order: 'desc' },
+          select: {
+            order: true,
           },
         },
       },
-      options: {
-        orderBy: { order: 'asc' },
+    })
+
+    if (!section || !section.template) {
+      return { success: false, error: 'Section not found' }
+    }
+
+    const nextOrder = (section.questions[0]?.order ?? 0) + 1
+    const allFieldCodes = section.template.sections.flatMap((sec) => sec.questions.map((q) => q.fieldCode))
+
+    const baseCode = `${section.code}.${nextOrder}`
+    let uniqueCode = baseCode
+    let counter = 1
+    while (allFieldCodes.includes(uniqueCode)) {
+      uniqueCode = `${baseCode}.${counter}`
+      counter += 1
+    }
+
+    const fallbackLabel = input.type
+      .toLowerCase()
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+
+    await prisma.formQuestion.create({
+      data: {
+        sectionId: parsedSectionId,
+        type: input.type,
+        label: input.label ?? `${fallbackLabel} field`,
+        fieldCode: uniqueCode,
+        order: nextOrder,
+        isRequired: false,
       },
-      scoringConfig: true,
-    },
-  })
+    })
 
-  if (!question || !question.section.template) {
-    throw new Error('Field not found')
+    await invalidateTemplate(section.template.id)
+    return { success: true }
+  } catch (error) {
+    console.error('createField failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to add field',
+    }
   }
+}
 
-  const nextOrder = (question.section.questions[0]?.order ?? 0) + 1
-  const allFieldCodes = question.section.template.sections.flatMap((sec) =>
-    sec.questions.map((q) => q.fieldCode)
-  )
+export async function updateField(fieldId: string, input: FieldUpdateInput): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(fieldId)
+    const parsedInput = fieldUpdateSchema.parse(input)
 
-  const baseCode = `${question.section.code}.${nextOrder}`
-  let uniqueCode = baseCode
-  let counter = 1
-  while (allFieldCodes.includes(uniqueCode)) {
-    uniqueCode = `${baseCode}.${counter}`
-    counter += 1
-  }
+    const question = await prisma.formQuestion.findUnique({
+      where: { id: parsedId },
+      select: {
+        id: true,
+        type: true,
+        section: {
+          select: {
+            templateId: true,
+          },
+        },
+      },
+    })
 
-  const duplicated = await prisma.formQuestion.create({
-    data: {
-      sectionId: question.sectionId,
-      type: question.type,
-      label: `${question.label} (Copy)`,
-      helpText: question.helpText,
-      placeholder: question.placeholder,
-      validation: question.validation,
-      conditional: question.conditional,
-      order: nextOrder,
-      fieldCode: uniqueCode,
-      isRequired: question.isRequired,
-      options: question.options.length
-        ? {
-            create: question.options.map((option, index) => ({
+    if (!question) {
+      return { success: false, error: 'Field not found' }
+    }
+
+    const selectionTypes = new Set<FieldType>([
+      FieldType.SINGLE_SELECT,
+      FieldType.CHECKBOX_GROUP,
+      FieldType.MULTI_SELECT,
+    ])
+
+    await prisma.$transaction(async (tx) => {
+      await tx.formQuestion.update({
+        where: { id: parsedId },
+        data: {
+          label: parsedInput.label,
+          helpText: parsedInput.helpText,
+          placeholder: parsedInput.placeholder,
+          isRequired: parsedInput.isRequired ?? false,
+        },
+      })
+
+      if (selectionTypes.has(question.type)) {
+        await tx.questionOption.deleteMany({ where: { questionId: parsedId } })
+
+        if (parsedInput.options && parsedInput.options.length > 0) {
+          await tx.questionOption.createMany({
+            data: parsedInput.options.map((option, index) => ({
+              questionId: parsedId,
               label: option.label,
               value: option.value,
               order: index + 1,
             })),
-          }
-        : undefined,
-      scoringConfig: question.scoringConfig
-        ? {
-            create: {
-              minScore: question.scoringConfig.minScore,
-              maxScore: question.scoringConfig.maxScore,
-              weight: question.scoringConfig.weight,
-              criteria: question.scoringConfig.criteria,
-            },
-          }
-        : undefined,
-    },
-  })
+          })
+        }
+      }
+    })
 
-  await invalidateTemplate(question.section.template.id)
-  return duplicated
+    await invalidateTemplate(question.section.templateId)
+    return { success: true }
+  } catch (error) {
+    console.error('updateField failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to update field',
+    }
+  }
 }
 
-export async function saveTemplateAsDraft(templateId: string) {
-  const parsedId = idSchema.parse(templateId)
+export async function deleteField(fieldId: string): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(fieldId)
 
-  await prisma.formTemplate.update({
-    where: { id: parsedId },
-    data: {
-      isActive: false,
-    },
-  })
-
-  await invalidateTemplate(parsedId)
-  revalidatePath('/dynamic-form/builder')
-}
-
-export async function publishTemplate(templateId: string) {
-  const parsedId = idSchema.parse(templateId)
-
-  const template = await prisma.formTemplate.findUnique({
-    where: { id: parsedId },
-    include: {
-      sections: {
-        include: {
-          questions: true,
+    const deleted = await prisma.formQuestion.delete({
+      where: { id: parsedId },
+      include: {
+        section: {
+          select: {
+            templateId: true,
+          },
         },
       },
-    },
-  })
+    })
 
-  if (!template) {
-    throw new Error('Template not found')
+    await invalidateTemplate(deleted.section.templateId)
+    return { success: true }
+  } catch (error) {
+    console.error('deleteField failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to delete field',
+    }
   }
-
-  if (template.sections.length === 0) {
-    throw new Error('Add at least one section before publishing')
-  }
-
-  const hasEmptySection = template.sections.some((section) => section.questions.length === 0)
-  if (hasEmptySection) {
-    throw new Error('Each section must contain at least one field before publishing')
-  }
-
-  await prisma.formTemplate.update({
-    where: { id: parsedId },
-    data: {
-      isActive: true,
-    },
-  })
-
-  await invalidateTemplate(parsedId)
-  revalidatePath('/dynamic-form/builder')
 }
 
-export async function updateTemplateMetadata(templateId: string, input: TemplateMetadataInput) {
-  const parsedId = idSchema.parse(templateId)
-  const parsedInput = templateMetadataSchema.parse(input)
+export async function moveField(fieldId: string, direction: 'up' | 'down'): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(fieldId)
 
-  await prisma.formTemplate.update({
-    where: { id: parsedId },
-    data: {
-      name: parsedInput.name,
-      version: parsedInput.version,
-      description: parsedInput.description,
-    },
-  })
+    const field = await prisma.formQuestion.findUnique({
+      where: { id: parsedId },
+      select: {
+        id: true,
+        order: true,
+        sectionId: true,
+        section: {
+          select: {
+            templateId: true,
+          },
+        },
+      },
+    })
 
-  await invalidateTemplate(parsedId)
-  revalidatePath('/dynamic-form/builder')
+    if (!field) {
+      return { success: false, error: 'Field not found' }
+    }
+
+    const comparator = direction === 'up' ? 'desc' : 'asc'
+    const orderFilter = direction === 'up' ? { lt: field.order } : { gt: field.order }
+
+    const adjacent = await prisma.formQuestion.findFirst({
+      where: {
+        sectionId: field.sectionId,
+        order: orderFilter,
+      },
+      orderBy: { order: comparator },
+    })
+
+    if (!adjacent) {
+      return { success: true }
+    }
+
+    await prisma.$transaction([
+      prisma.formQuestion.update({
+        where: { id: field.id },
+        data: { order: adjacent.order },
+      }),
+      prisma.formQuestion.update({
+        where: { id: adjacent.id },
+        data: { order: field.order },
+      }),
+    ])
+
+    await invalidateTemplate(field.section.templateId)
+    return { success: true }
+  } catch (error) {
+    console.error('moveField failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to move field',
+    }
+  }
+}
+
+export async function duplicateField(fieldId: string): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(fieldId)
+
+    const question = await prisma.formQuestion.findUnique({
+      where: { id: parsedId },
+      include: {
+        section: {
+          include: {
+            template: {
+              select: {
+                id: true,
+                sections: {
+                  include: {
+                    questions: {
+                      select: {
+                        fieldCode: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            questions: {
+              orderBy: { order: 'desc' },
+              select: {
+                order: true,
+              },
+            },
+          },
+        },
+        options: {
+          orderBy: { order: 'asc' },
+        },
+        scoringConfig: true,
+      },
+    })
+
+    if (!question || !question.section.template) {
+      return { success: false, error: 'Field not found' }
+    }
+
+    const nextOrder = (question.section.questions[0]?.order ?? 0) + 1
+    const allFieldCodes = question.section.template.sections.flatMap((sec) =>
+      sec.questions.map((q) => q.fieldCode)
+    )
+
+    const baseCode = `${question.section.code}.${nextOrder}`
+    let uniqueCode = baseCode
+    let counter = 1
+    while (allFieldCodes.includes(uniqueCode)) {
+      uniqueCode = `${baseCode}.${counter}`
+      counter += 1
+    }
+
+    await prisma.formQuestion.create({
+      data: {
+        sectionId: question.sectionId,
+        type: question.type,
+        label: `${question.label} (Copy)`,
+        helpText: question.helpText,
+        placeholder: question.placeholder,
+        validation: question.validation ?? undefined,
+        conditional: question.conditional ?? undefined,
+        order: nextOrder,
+        fieldCode: uniqueCode,
+        isRequired: question.isRequired,
+        options: question.options.length
+          ? {
+              create: question.options.map((option, index) => ({
+                label: option.label,
+                value: option.value,
+                order: index + 1,
+              })),
+            }
+          : undefined,
+        scoringConfig: question.scoringConfig
+          ? {
+              create: {
+                minScore: question.scoringConfig.minScore,
+                maxScore: question.scoringConfig.maxScore,
+                weight: question.scoringConfig.weight,
+                criteria: question.scoringConfig.criteria as Prisma.InputJsonValue,
+              },
+            }
+          : undefined,
+      },
+    })
+
+    await invalidateTemplate(question.section.template.id)
+    return { success: true }
+  } catch (error) {
+    console.error('duplicateField failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to duplicate field',
+    }
+  }
+}
+
+export async function saveTemplateAsDraft(templateId: string): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(templateId)
+
+    await prisma.formTemplate.update({
+      where: { id: parsedId },
+      data: {
+        isActive: false,
+      },
+    })
+
+    await invalidateTemplate(parsedId)
+    revalidatePath('/dynamic-form/builder')
+    return { success: true }
+  } catch (error) {
+    console.error('saveTemplateAsDraft failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to save draft',
+    }
+  }
+}
+
+export async function publishTemplate(templateId: string): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(templateId)
+
+    const template = await prisma.formTemplate.findUnique({
+      where: { id: parsedId },
+      include: {
+        sections: {
+          include: {
+            questions: true,
+          },
+        },
+      },
+    })
+
+    if (!template) {
+      return { success: false, error: 'Template not found' }
+    }
+
+    if (template.sections.length === 0) {
+      return { success: false, error: 'Add at least one section before publishing' }
+    }
+
+    const hasEmptySection = template.sections.some((section) => section.questions.length === 0)
+    if (hasEmptySection) {
+      return { success: false, error: 'Each section must include at least one field before publishing' }
+    }
+
+    await prisma.formTemplate.update({
+      where: { id: parsedId },
+      data: {
+        isActive: true,
+      },
+    })
+
+    await invalidateTemplate(parsedId)
+    revalidatePath('/dynamic-form/builder')
+    return { success: true }
+  } catch (error) {
+    console.error('publishTemplate failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to publish template',
+    }
+  }
+}
+
+export async function updateTemplateMetadata(templateId: string, input: TemplateMetadataInput): Promise<ActionResult> {
+  try {
+    const parsedId = idSchema.parse(templateId)
+    const parsedInput = templateMetadataSchema.parse(input)
+
+    await prisma.formTemplate.update({
+      where: { id: parsedId },
+      data: {
+        name: parsedInput.name,
+        version: parsedInput.version,
+        description: parsedInput.description,
+      },
+    })
+
+    await invalidateTemplate(parsedId)
+    revalidatePath('/dynamic-form/builder')
+    return { success: true }
+  } catch (error) {
+    console.error('updateTemplateMetadata failed', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unable to update template settings',
+    }
+  }
 }
 
 export async function createTemplateAction(formData: FormData) {

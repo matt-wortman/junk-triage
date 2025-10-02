@@ -5,6 +5,7 @@
   "scripts": {
     "prisma:dev": "dotenv -e .env.prisma-dev -- npx prisma dev",
     "dev": "dotenv -e .env.prisma-dev -- next dev --turbopack",
+    "dev:classic": "dotenv -e .env -- next dev",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",

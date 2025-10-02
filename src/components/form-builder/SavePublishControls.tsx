@@ -20,7 +20,11 @@ export function SavePublishControls({ templateId, isActive, disabled = false }: 
   const handleSave = () => {
     startSave(async () => {
       try {
-        await saveTemplateAsDraft(templateId)
+        const result = await saveTemplateAsDraft(templateId)
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Draft saved')
         router.refresh()
       } catch (error) {
@@ -33,7 +37,11 @@ export function SavePublishControls({ templateId, isActive, disabled = false }: 
   const handlePublish = () => {
     startPublish(async () => {
       try {
-        await publishTemplate(templateId)
+        const result = await publishTemplate(templateId)
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Template published')
         router.refresh()
       } catch (error) {

@@ -43,13 +43,21 @@ export function PreviewMode({ initialTemplate, searchParams }: PreviewModeProps)
             <div className="rounded-lg border bg-white p-6 space-y-6">
               <FormEngineProvider
                 template={template}
-                onSubmit={async () => toast.info('Preview submit intercepted')}
-                onSaveDraft={async () => toast.info('Preview save intercepted')}
+                onSubmit={async () => {
+                  toast.info('Preview submit intercepted')
+                }}
+                onSaveDraft={async () => {
+                  toast.info('Preview save intercepted')
+                }}
               >
                 <DynamicFormRenderer />
                 <DynamicFormNavigation
-                  onSubmit={async () => toast.info('Preview submit intercepted')}
-                  onSaveDraft={async () => toast.info('Preview save intercepted')}
+                  onSubmit={async () => {
+                    toast.info('Preview submit intercepted')
+                  }}
+                  onSaveDraft={async () => {
+                    toast.info('Preview save intercepted')
+                  }}
                 />
               </FormEngineProvider>
             </div>

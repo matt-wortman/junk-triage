@@ -1,6 +1,6 @@
 # Prisma Operations Guide
 
-Use this guide to work with Prisma in the Tech Triage Platform, from local development through production maintenance on Azure.
+Use this guide to work with Prisma in the Tech Triage Platform, from local development through production maintenance on Azure. For a quick matrix of environments (Prisma dev server vs. Docker Postgres vs. Azure), see `ENVIRONMENT_MODES.md`.
 
 ---
 ## 1. Local Development

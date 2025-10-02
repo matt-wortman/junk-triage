@@ -31,7 +31,11 @@ export function SectionCard({ section, templateId, isFirst, isLast, allSections,
   const handleFieldCreate = (fieldType: FieldType) => {
     startTransition(async () => {
       try {
-        await createField(section.id, { type: fieldType })
+        const result = await createField(section.id, { type: fieldType })
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Field created')
         router.refresh()
       } catch (error) {

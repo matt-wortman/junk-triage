@@ -55,10 +55,18 @@ export function SectionForm({ templateId, sectionId, initialValues, onClose, exi
     startTransition(async () => {
       try {
         if (sectionId) {
-          await updateSection(sectionId, data)
+          const result = await updateSection(sectionId, data)
+          if (!result.success) {
+            toast.error(result.error)
+            return
+          }
           toast.success('Section updated')
         } else {
-          await createSection(templateId, data)
+          const result = await createSection(templateId, data)
+          if (!result.success) {
+            toast.error(result.error)
+            return
+          }
           toast.success('Section created')
         }
         router.refresh()
@@ -159,7 +167,11 @@ export function SectionActions({ sectionId, disableMoveDown, disableMoveUp, disa
   const handleDelete = () => {
     startTransition(async () => {
       try {
-        await deleteSection(sectionId)
+        const result = await deleteSection(sectionId)
+        if (!result.success) {
+          toast.error(result.error)
+          return
+        }
         toast.success('Section deleted')
         router.refresh()
       } catch (error) {
@@ -180,7 +192,11 @@ export function SectionActions({ sectionId, disableMoveDown, disableMoveUp, disa
           startTransition(async () => {
             if (disableMoveUp || disabled) return
             try {
-              await moveSection(sectionId, 'up')
+              const result = await moveSection(sectionId, 'up')
+              if (!result.success) {
+                toast.error(result.error)
+                return
+              }
               router.refresh()
             } catch (error) {
               console.error('Failed to move section', error)
@@ -200,7 +216,11 @@ export function SectionActions({ sectionId, disableMoveDown, disableMoveUp, disa
           startTransition(async () => {
             if (disableMoveDown || disabled) return
             try {
-              await moveSection(sectionId, 'down')
+              const result = await moveSection(sectionId, 'down')
+              if (!result.success) {
+                toast.error(result.error)
+                return
+              }
               router.refresh()
             } catch (error) {
               console.error('Failed to move section', error)
