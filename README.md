@@ -2,14 +2,14 @@
 
 A sophisticated web application that digitalizes the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage evaluation process. Built with a modern, database-driven architecture supporting both hardcoded and dynamic form implementations.
 
-## 📌 Status Snapshot (2025-09-25)
-- Full report: `STATUS-2025-09-25.md`
-- Local Docker: `docker compose up --build` runs app + Postgres; health at `/api/health`
-- DB roles: `triage_migrator` (migrations), `triage_app` (runtime DML)
-- Image: `innovationventures.azurecr.io/tech-triage-platform:prod`
-- Azure: ACI setup in progress; ensure `DATABASE_URL`/`PRISMA_MIGRATE_DATABASE_URL` target a real Postgres (managed or ACI sidecar)
-- Secrets: move production values to ACI/Key Vault; rotate before go‑live
-- Next steps: choose DB hosting (managed vs. sidecar), wire HTTPS, enable monitoring, disable demo seed in prod
+## 📌 Status Snapshot (2025-10-02)
+- Full deployment notes: `docs/release-notes/2025-10-02.md`
+- Latest container: `innovationventures.azurecr.io/tech-triage-platform:prod@sha256:31bcaa541b70261694fe806ff8cd8a4490743adbe9ebcbf4f40dc3a5eef99ff7`
+- Azure Web App `tech-triage-app` restarted 2025-10-02; `/api/health` confirms database connectivity
+- Dynamic form now exports **print-ready PDFs** (report layout + scoring graphics) via `/api/form-exports`
+- Builder landing page forced to dynamic rendering (`export const dynamic = 'force-dynamic'`) so container builds no longer require DATABASE_URL at build time
+- Secrets still live in App Service configuration; Key Vault retrieval currently blocked by RBAC—set env vars manually before running `scripts/deploy-to-azure.sh`
+- Upcoming work: migrate secrets to Key Vault, restrict Postgres firewall, add CI/CD release automation, and expand PDF styling to include branding assets
 
 ## 🚀 Quick Start
 
@@ -51,6 +51,47 @@ npm test -- demo-seeding # Prisma demo data integrity tests
 - ✅ **Hardcoded Form**: `/form` - 100% hardcoded, production-ready, NO database usage
 - ✅ **Dynamic Form**: `/dynamic-form` - 100% database-driven prototype (needs enhancement)
 - ✅ **Landing Page**: `/` - Marketing homepage with design system
+- ✅ **PDF Export**: `/api/form-exports` - Generates print-ready PDF reports (see "🧾 PDF Export & Reporting")
+
+## 🧾 PDF Export & Reporting
+
+The dynamic form now supports PDF exports that mirror the in-browser scoring experience but render in a report-first layout. The export endpoint is designed to work for blank templates, active drafts, or fully submitted responses.
+
+### Endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/form-exports` | Returns a PDF attachment summarizing the supplied form state or stored submission |
+
+### Request Payloads
+
+```jsonc
+// Live form state (current user session)
+{
+  "templateId": "tmpl_123",
+  "responses": { "F0.1": "1024-AC", "F2.1.a": "Aligned with ..." },
+  "repeatGroups": {
+    "F4.5": [ { "name": "Competitor A", "comments": "..." } ]
+  },
+  "status": "IN_PROGRESS" // BLANK | IN_PROGRESS | DRAFT | SUBMITTED, defaults to IN_PROGRESS
+}
+
+// Stored submission re-download
+{
+  "submissionId": "subm_456"
+}
+```
+
+The API normalizes option labels, repeatable group rows, and scoring metrics before generating the PDF.
+
+### Output Features
+- Numbered question/response layout with concise typography
+- Repeatable group tables rendered as row blocks
+- Scoring matrix table (Impact & Value sections with weights/totals)
+- Impact vs Value quadrant graphic with recommendation pill
+- Automatic page break before analytics section to keep graphics intact
+
+If the export should include additional branding (logos, headers) drop assets in `public/` and update `src/lib/form-engine/pdf/FormPdfDocument.tsx`.
 
 ## 📊 Current Project Status
 
@@ -84,12 +125,14 @@ npm test -- demo-seeding # Prisma demo data integrity tests
 - [x] **Conditional logic engine** for field visibility
 - [x] **Seed data** with structured F0–F6 sections and optional demo submissions
 
-### 🔧 Phase 4: Enhanced Dynamic Forms (CURRENT PHASE)
-**Status**: Ready for implementation based on NEXT_STEPS.md
-- [ ] **Enhanced question structure** - 60+ granular questions (vs current 18)
-- [ ] **Functional repeatable groups** - Competitor/SME tables with CRUD
-- [ ] **Form persistence** - Draft saving, resume, submission storage
-- [ ] **Validation framework** - Comprehensive Zod schema validation
+- ### 🔧 Phase 4: Enhanced Dynamic Forms & Reporting (IN PROGRESS)
+**Highlights (2025-10-02 build):**
+- [x] **PDF export service** – `/api/form-exports` streams blank/draft/submitted forms with a print-first layout and scoring visuals
+- [x] **Report layout polish** – numbered question/response list, scoring matrix, impact vs value quadrant, automatic page break handling
+- [x] **Builder build optimization** – `/dynamic-form/builder` renders dynamically at runtime so container builds succeed without DATABASE_URL
+- [ ] **Repeatable group CRUD** – Competitor/SME authoring still read-only in export
+- [ ] **Integration tests** – Need Playwright coverage for export flows and regression checks
+- [ ] **Dynamic guidance capture** – Info boxes are hidden in exports; future work: render as callouts
 
 ### 📋 Phase 5+: Production Features (PLANNED)
 - [ ] Authentication & user management (NextAuth.js)

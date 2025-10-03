@@ -6,7 +6,7 @@ This document gives senior engineers everything needed to operate and extend the
 - **Application**: Next.js 15 (App Router) running in a container. Prisma ORM talks to PostgreSQL.
 - **Entry script**: `/usr/src/app/start.sh` runs Prisma migrations, optional seed, then launches `node server.js`.
 - **Database**: Azure Database for PostgreSQL Flexible Server (v17). Prisma migrations manage schema.
-- **Image pipeline**: Source lives in this repo. Images are built with `az acr build` into the Innovation Ventures ACR and pulled by the App Service.
+- **Image pipeline**: Source lives in this repo. Images are built with `az acr build` into the Innovation Ventures ACR and pulled by the App Service. Latest tag (`prod`) digest: `sha256:31bcaa541b70261694fe806ff8cd8a4490743adbe9ebcbf4f40dc3a5eef99ff7` (published 2025-10-02).
 - **Health checks**: `/api/health` exercises the database connection and is wired into the App Service container health probe.
 
 ## 2. Resource Inventory
@@ -34,6 +34,8 @@ This document gives senior engineers everything needed to operate and extend the
 
 ## 4. Deployment Workflow
 Use `scripts/deploy-to-azure.sh` for provisioning or updating. The script is idempotent: it creates resources if missing and refreshes configuration if they already exist.
+
+> **Important:** Key Vault RBAC is not wired up for CI yet. If the script cannot read secrets (`ForbiddenByRbac`), export `POSTGRES_ADMIN`, `POSTGRES_PASSWORD`, and `NEXTAUTH_SECRET` in your shell before running the script. The script will honor pre-set env vars.
 
 ### Required inputs
 Provide secrets via environment variables (current strategy) or via Key Vault once RBAC issues are resolved.
@@ -114,9 +116,9 @@ az webapp log tail -g rg-eastus-hydroxyureadosing -n tech-triage-app
 - Current plan is `P1v3`. For lighter usage switch to `B1` or `B1ms`; for heavier workloads scale out or up via `az appservice plan update ...`.
 
 ### Rolling out a new image
-1. Build/push image (`az acr build ...`).
+1. Build/push image (`az acr build ...`). Container builds no longer require DATABASE_URL because `/dynamic-form/builder` renders dynamically.
 2. Restart web app or run `./scripts/deploy-to-azure.sh` to ensure config points at the latest tag.
-3. Validate `/api/health` and key UI paths.
+3. Validate `/api/health`, `/dynamic-form`, `/dynamic-form/builder`, and the PDF export flow (trigger `POST /api/form-exports`).
 
 ### Database migrations
 - Apply via `npm run prisma:migrate` locally, commit the new migration, rebuild image, deploy.

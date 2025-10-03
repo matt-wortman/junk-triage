@@ -99,6 +99,8 @@ function resolveBanner(statusKey?: string, errorKey?: string): BannerMessage | n
   return null
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function BuilderLandingPage({ searchParams }: BuilderPageProps) {
   const templates = await getTemplates()
   const statusParam = Array.isArray(searchParams?.status)

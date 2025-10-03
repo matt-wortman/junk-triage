@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Azure deployment script for Tech Triage Platform.
-# Reads secrets from Azure Key Vault to avoid hard-coded credentials.
+# Reads secrets from Azure Key Vault when RBAC allows; otherwise
+# export POSTGRES_ADMIN/POSTGRES_PASSWORD/NEXTAUTH_SECRET before running.
 
 RESOURCE_GROUP="${RESOURCE_GROUP:-rg-tech-triage}"
 LOCATION="${LOCATION:-eastus}"

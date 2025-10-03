@@ -1,17 +1,18 @@
-# Code Master Report – 2025-10-01 Update
+# Code Master Report – 2025-10-02 Update
 
 This document captures the current health of the Tech Triage Platform after completing Phases 0 through 10 of the form-builder roadmap. It supersedes earlier audit notes that flagged TypeScript errors and failing tests—those issues have been resolved.
 
 ---
 ## Executive Snapshot
-- **Status:** Phase 0–10 complete, Phase 11 (polish/error-handling backlog) queued.
-- **Builds:** `npm run build` and `npm run lint` pass cleanly.
+- **Status:** Phase 0–11 complete; Phase 12 (integration testing) queued.
+- **Builds:** `npm run build` and `npm run lint` pass cleanly. Azure ACR build `sha256:31bcaa541b70261694fe806ff8cd8a4490743adbe9ebcbf4f40dc3a5eef99ff7` deployed 2025-10-02.
 - **Environments:** Documented in `ENVIRONMENT_MODES.md`; Prisma Dev Server + Next dev remain the primary workflow.
 - **Key recent changes:**
   - Section/field codes hidden from builder UI; help text renders without prefixed labels.
   - Draft titles now derive from the “Technology ID” field to ease identification.
   - Field selector + configuration modal fully wired with server actions, previews, and structured error handling.
   - Preview mode renders full form in read-only state while exposing real edit controls in edit mode.
+  - PDF export endpoint delivers report-style downloads with scoring visuals and automatic page breaks.
 
 ---
 ## Architecture & Patterns
@@ -52,13 +53,13 @@ Always kill old processes on port 3000 before switching context: `lsof -ti:3000 
 | 8 – Save & Publish | Draft/publish actions with validation + toasts | ✅ Complete |
 | 9 – Template Metadata | Settings modal for name/version/description | ✅ Complete |
 | 10 – Polish & Error Handling | Structured action results, skeleton loaders, error boundaries | ✅ Complete |
-
-Upcoming Phase 11 will focus on remaining polish items (e.g., deeper analytics, code cleanup).
+| 11 – Reporting & Export | PDF export endpoint, scoring visuals, info-box suppression | ✅ Complete |
 
 ---
 ## Known Backlog
-- **Testing:** Builder workflows lack automated integration coverage; consider Playwright once the environment story is finalized.
+- **Testing:** Builder + PDF workflows lack automated integration coverage; add Playwright smoke tests for export downloads.
 - **Indexes:** Database `@@index` definitions could improve performance for high-volume usage.
+- **Secrets:** App Service still relies on inline secrets; migrate to Key Vault + managed identity once RBAC is granted.
 - **Docs:** Keep `ENVIRONMENT_MODES.md`, `prisma_readme.md`, and this report aligned when workflows change.
 
 ---
@@ -75,6 +76,6 @@ npm start            # Start built server on port 3000
 ## Contact
 - **Project owners:** Tech Triage Platform team
 - **Documentation:** `ENVIRONMENT_MODES.md`, `prisma_readme.md`, `MVP_status.md`, this report
-- **Date of last update:** 2025‑10‑01
+- **Date of last update:** 2025‑10‑02
 
 The remainder of the original audit (including historical findings) has been intentionally removed to prevent confusion. Use this snapshot as the authoritative reference moving forward.

@@ -327,6 +327,7 @@ const [initialFormData, setInitialFormData] = useState<{
               }
               isSubmitting={isSubmitting}
               isSavingDraft={isSavingDraft}
+              submissionId={currentDraftId}
             />
           </div>
         </FormEngineProvider>

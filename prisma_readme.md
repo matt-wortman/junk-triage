@@ -114,6 +114,7 @@ Stop Studio with `Ctrl+C` and close the remote connection.
 
 | Issue | Fix |
 | --- | --- |
+| ACR build fails with `Environment variable not found: DATABASE_URL` | Update to commit 2025-10-02 or ensure `/dynamic-form/builder` is marked `export const dynamic = 'force-dynamic'`; older builds attempted to pre-render the builder during Docker builds. |
 | `prisma generate` fails in Docker build | Ensure `node_modules` is present; run `npm install` before build stage locally. |
 | Seed script wipes data unexpectedly | Set `RUN_PRISMA_SEED=false` before restarting production; seed only when needed. |
 | `npx prisma studio` hangs on Azure DB | Confirm firewall rule includes your current IP and `sslmode=require` in `DATABASE_URL`. |

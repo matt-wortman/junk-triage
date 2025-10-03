@@ -1,6 +1,6 @@
 # MVP Implementation Status
 
-**Last Updated:** 2025-10-01
+**Last Updated:** 2025-10-02
 
 ## Completed
 - Phase 0 (Foundation Setup) from `formBuilderImplementationPlan.md`
@@ -50,14 +50,21 @@
   - Enhanced form validation with better error messages
   - Improved empty states and user guidance
   - Refactored large files for better maintainability
+- Phase 11 (PDF Export & Reporting)
+  - Introduced `/api/form-exports` endpoint for blank/draft/submitted PDF generation
+  - Built report-first PDF layout with numbered questions, repeatable row formatting, and automatically inferred Tech ID
+  - Added scoring matrix table and impact vs value quadrant to exports, including recommendation pill styling
+  - Ensured analytics section starts on a new page to prevent layout splits
+  - Filtered guidance/info-box questions out of exports so reports show only actionable prompts
 
 ## In Progress
-- Nothing currently in progress.
+- Deployment hardening: migrate secrets to Key Vault once RBAC is granted
+- Export QA: add Playwright coverage for PDF downloads and scoring visuals
 
 ## Upcoming
-- Phase 11: Integration testing with form renderer
-- Phase 12: Testing & validation (manual testing checklist)
-- Phase 13: Documentation & inline help
+- Phase 12: Integration testing with form renderer
+- Phase 13: Testing & validation (manual QA checklist + PDF spot-check)
+- Phase 14: Documentation & inline help (include PDF user guide + troubleshooting)
 
 ## Notes
 - No schema changes or new migrations were required for Phase 0.
