@@ -1,4 +1,4 @@
-import { ConditionalConfig, ConditionalRule } from './types';
+import { ConditionalConfig, ConditionalRule, RepeatableFieldConfig, RepeatableGroupConfig } from './types';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -14,6 +14,7 @@ const allowedOperators: ConditionalRule['operator'][] = [
 ];
 
 const allowedActions: ConditionalRule['action'][] = ['show', 'hide', 'require', 'optional'];
+const allowedColumnTypes: RepeatableFieldConfig['type'][] = ['text', 'textarea', 'number'];
 
 export function isJsonRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -183,4 +184,89 @@ function toConditionalValue(value: unknown): ConditionalRule['value'] | undefine
   }
 
   return undefined;
+}
+
+function parseRepeatableColumn(value: unknown): RepeatableFieldConfig | null {
+  const record = parseJsonRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const label = typeof record.label === 'string' ? record.label.trim() : '';
+  if (!label) {
+    return null;
+  }
+
+  const rawKey = typeof record.key === 'string' ? record.key.trim() : '';
+  const normalizedKey = rawKey || labelToKey(label);
+
+  const typeValue = typeof record.type === 'string' ? record.type : 'text';
+  if (!(allowedColumnTypes as string[]).includes(typeValue)) {
+    return null;
+  }
+
+  const required = Boolean(record.required);
+
+  return {
+    key: normalizedKey,
+    label,
+    type: typeValue as RepeatableFieldConfig['type'],
+    required,
+  };
+}
+
+function labelToKey(label: string): string {
+  return label
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/(^_|_$)+/g, '') || 'column';
+}
+
+function parseOptionalRowCount(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
+export function parseRepeatableGroupConfig(value: unknown): RepeatableGroupConfig | null {
+  const record = parseJsonRecord(value);
+  if (!record) {
+    return null;
+  }
+
+  const rawColumns = Array.isArray(record.columns) ? record.columns : [];
+  const columns = rawColumns
+    .map(parseRepeatableColumn)
+    .filter((column): column is RepeatableFieldConfig => column !== null);
+
+  if (!columns.length) {
+    return null;
+  }
+
+  const minRows = parseOptionalRowCount(record.minRows);
+  const maxRows = parseOptionalRowCount(record.maxRows);
+
+  const result: RepeatableGroupConfig = {
+    columns,
+  };
+
+  if (typeof minRows === 'number') {
+    result.minRows = minRows;
+  }
+
+  if (typeof maxRows === 'number') {
+    result.maxRows = typeof result.minRows === 'number' && maxRows < result.minRows ? result.minRows : maxRows;
+  }
+
+  return result;
 }

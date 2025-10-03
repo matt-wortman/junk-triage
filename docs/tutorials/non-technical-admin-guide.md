@@ -65,11 +65,19 @@ You can edit existing questions, duplicate them, or add new ones.
 3. Give it a clear label.
 4. Add guidance using plain instructions (“Explain how this technology improves patient safety”).
 
-### Work with Repeatable Groups
-Use repeatable groups when you want multiple entries, such as competitor lists.
-1. Add a repeatable group field.
-2. Define the columns (e.g., Company Name, Product, Notes).
-3. In the live form, submitters can add as many rows as they need.
+### Build a Data Table (formerly Repeatable Group)
+Use a **Data Table** when you want to capture several related fields per row (competitors, SMEs, milestones, etc.).
+1. Add a **Data Table** field.
+2. In the configuration modal, describe each column:
+   - Enter the column label (e.g., “Company”, “Product or Solution”).
+   - Choose the input type (`Text`, `Paragraph`, or `Number`).
+   - Toggle **Required** if the column must be completed on every row.
+   - The database key auto-fills using underscores (e.g., `company_name`); it’s read-only so data stays consistent.
+3. Set **Minimum rows** (how many entries must remain) and **Maximum rows** (optional cap). Leave max blank for “unlimited.”
+4. Click **Add column** to insert more columns (limit of 8); use the trash icon to remove extras (at least one column is required).
+5. Save the field. In the live form, submitters see the configured table and can add rows until the maximum is reached.
+
+> **Dropdown tip:** When configuring dropdowns, the second column shows the database value (auto-slugged with underscores). These stay read-only so labels can change without breaking stored data.
 
 > **Design Tip:** Keep sections short. If a section has more than 6–7 questions, consider splitting it into two.
 

@@ -91,8 +91,8 @@ export const FIELD_TYPE_CONFIG: Record<FieldType, FieldTypeConfig> = {
     category: 'date-time',
   },
   REPEATABLE_GROUP: {
-    label: 'Repeatable Table',
-    description: 'Structured rows where users can add multiple entries.',
+    label: 'Data Table',
+    description: 'Structured rows of related fields; users can add multiple entries.',
     icon: Table,
     category: 'complex',
   },

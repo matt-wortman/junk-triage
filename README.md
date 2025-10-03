@@ -2,14 +2,16 @@
 
 A sophisticated web application that digitalizes the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage evaluation process. Built with a modern, database-driven architecture supporting both hardcoded and dynamic form implementations.
 
-## 📌 Status Snapshot (2025-10-02)
+## 📌 Status Snapshot (2025-10-03)
 - Full deployment notes: `docs/release-notes/2025-10-02.md`
 - Latest container: `innovationventures.azurecr.io/tech-triage-platform:prod@sha256:31bcaa541b70261694fe806ff8cd8a4490743adbe9ebcbf4f40dc3a5eef99ff7`
 - Azure Web App `tech-triage-app` restarted 2025-10-02; `/api/health` confirms database connectivity
-- Dynamic form now exports **print-ready PDFs** (report layout + scoring graphics) via `/api/form-exports`
-- Builder landing page forced to dynamic rendering (`export const dynamic = 'force-dynamic'`) so container builds no longer require DATABASE_URL at build time
+- Dynamic form exports **print-ready PDFs** (report layout + scoring graphics) via `/api/form-exports`
+- Builder now supports **Data Table configuration** (column definitions + min/max row limits stored in Prisma `repeatableConfig`)
+- Dropdown option slugs normalize with underscores and show labeled, read-only database keys
+- New `npm run dev:logs` / `npm run prisma:dev:logs` commands mirror server output into timestamped files under `logs/`
 - Secrets still live in App Service configuration; Key Vault retrieval currently blocked by RBAC—set env vars manually before running `scripts/deploy-to-azure.sh`
-- Upcoming work: migrate secrets to Key Vault, restrict Postgres firewall, add CI/CD release automation, and expand PDF styling to include branding assets
+- Upcoming work: migrate secrets to Key Vault, restrict Postgres firewall, add CI/CD release automation, expand PDF styling, and add builder integration tests
 
 ## 🚀 Quick Start
 
@@ -28,6 +30,13 @@ npm install
 # Start both servers (required for full functionality)
 npm run dev              # Terminal 1: Web server
 npx prisma dev          # Terminal 2: Database server
+```
+
+> **Need captured logs?** Use the `:logs` variants to mirror output into the `logs/` directory while still streaming to the console:
+
+```bash
+npm run dev:logs         # Writes logs/next-dev-YYYYMMDD-HHMMSS.log
+npm run prisma:dev:logs  # Writes logs/prisma-dev-YYYYMMDD-HHMMSS.log
 ```
 
 **Access Points:**
@@ -126,13 +135,15 @@ If the export should include additional branding (logos, headers) drop assets in
 - [x] **Seed data** with structured F0–F6 sections and optional demo submissions
 
 - ### 🔧 Phase 4: Enhanced Dynamic Forms & Reporting (IN PROGRESS)
-**Highlights (2025-10-02 build):**
+**Highlights (2025-10-03 build):**
 - [x] **PDF export service** – `/api/form-exports` streams blank/draft/submitted forms with a print-first layout and scoring visuals
 - [x] **Report layout polish** – numbered question/response list, scoring matrix, impact vs value quadrant, automatic page break handling
 - [x] **Builder build optimization** – `/dynamic-form/builder` renders dynamically at runtime so container builds succeed without DATABASE_URL
-- [ ] **Repeatable group CRUD** – Competitor/SME authoring still read-only in export
-- [ ] **Integration tests** – Need Playwright coverage for export flows and regression checks
-- [ ] **Dynamic guidance capture** – Info boxes are hidden in exports; future work: render as callouts
+- [x] **Data Table configurator** – authors define table columns, input types, required flags, and row limits directly in the builder (stored in Prisma `repeatableConfig`)
+- [x] **Dropdown UX improvements** – labeled database keys, underscore slug normalization, and enforced option limits using shared constants
+- [x] **Server log capture** – `npm run dev:logs` / `npm run prisma:dev:logs` mirror terminal output into `logs/` for offline review
+- [ ] **Integration tests** – Need Playwright coverage for export flows, data table editing, and regression checks
+- [ ] **Dynamic guidance capture** – Info boxes remain hidden in exports; future work: render as callouts
 
 ### 📋 Phase 5+: Production Features (PLANNED)
 - [ ] Authentication & user management (NextAuth.js)

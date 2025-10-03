@@ -132,6 +132,7 @@ model FormQuestion {
   placeholder    String?
   validation     Json?    // Validation rules
   conditional    Json?    // Show/hide conditions
+  repeatableConfig Json?  // Configuration for repeatable/data table fields
   order          Int
   isRequired     Boolean  @default(false)
 

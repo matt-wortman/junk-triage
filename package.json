@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "prisma:dev": "dotenv -e .env.prisma-dev -- npx prisma dev",
+    "prisma:dev:logs": "tsx scripts/run-prisma-dev-with-logs.ts",
     "dev": "dotenv -e .env.prisma-dev -- next dev --turbopack",
+    "dev:logs": "tsx scripts/run-next-dev-with-logs.ts",
     "dev:classic": "dotenv -e .env -- next dev",
     "build": "next build --turbopack",
     "start": "next start",

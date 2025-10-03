@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { ChangeEvent, useEffect, useMemo, useState, useTransition } from 'react'
 import { FieldType } from '@prisma/client'
 import { TemplateDetail, updateField, FieldUpdateInput } from '@/app/dynamic-form/builder/actions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -9,9 +9,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MAX_DROPDOWN_OPTIONS, MAX_DATA_TABLE_COLUMNS, MAX_DATA_TABLE_ROWS } from '@/lib/form-builder/builder-limits'
 import { FieldTypeIcon } from './FieldTypeIcon'
 import { toast } from 'sonner'
 import { Trash2 } from 'lucide-react'
+import { parseRepeatableGroupConfig } from '@/lib/form-engine/json-utils'
 
 interface FieldConfigModalProps {
   field: TemplateDetail['sections'][number]['questions'][number]
@@ -27,6 +30,22 @@ interface OptionState {
   key: string
 }
 
+type TableColumnType = 'text' | 'textarea' | 'number'
+
+interface TableColumnState {
+  id: string
+  label: string
+  key: string
+  type: TableColumnType
+  required: boolean
+}
+
+const COLUMN_TYPE_OPTIONS: Array<{ value: TableColumnType; label: string }> = [
+  { value: 'text', label: 'Text' },
+  { value: 'textarea', label: 'Paragraph' },
+  { value: 'number', label: 'Number' },
+]
+
 const selectionTypes = new Set<FieldType>([
   FieldType.SINGLE_SELECT,
   FieldType.CHECKBOX_GROUP,
@@ -37,8 +56,8 @@ const slugify = (value: string) =>
   value
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/(^_|_$)+/g, '')
 
 const newOption = (): OptionState => ({
   key: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
@@ -46,15 +65,47 @@ const newOption = (): OptionState => ({
   value: '',
 })
 
+const createColumnState = (label: string, existing: TableColumnState[] = []): TableColumnState => {
+  const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)
+  const baseKey = slugify(label || `column_${existing.length + 1}`)
+  return {
+    id,
+    label,
+    key: ensureUniqueColumnKey(baseKey, existing, id),
+    type: 'text',
+    required: false,
+  }
+}
+
+function ensureUniqueColumnKey(baseKey: string, columns: TableColumnState[], currentId?: string) {
+  const sanitized = baseKey || 'column'
+  const usedKeys = new Set(columns.filter((col) => col.id !== currentId).map((col) => col.key))
+  if (!usedKeys.has(sanitized)) {
+    return sanitized
+  }
+
+  let counter = 2
+  let candidate = `${sanitized}_${counter}`
+  while (usedKeys.has(candidate)) {
+    counter += 1
+    candidate = `${sanitized}_${counter}`
+  }
+  return candidate
+}
+
 export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldConfigModalProps) {
   const [labelValue, setLabelValue] = useState(field.label)
   const [helpTextValue, setHelpTextValue] = useState(field.helpText ?? '')
   const [placeholderValue, setPlaceholderValue] = useState(field.placeholder ?? '')
   const [isRequired, setIsRequired] = useState(field.isRequired)
   const [options, setOptions] = useState<OptionState[]>([])
+  const [tableColumns, setTableColumns] = useState<TableColumnState[]>([])
+  const [tableMinRows, setTableMinRows] = useState<string>('0')
+  const [tableMaxRows, setTableMaxRows] = useState<string>('')
   const [pending, startTransition] = useTransition()
 
   const supportsOptions = useMemo(() => selectionTypes.has(field.type), [field.type])
+  const isDataTable = field.type === FieldType.REPEATABLE_GROUP
 
   useEffect(() => {
     if (!open) return
@@ -79,7 +130,45 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
     } else {
       setOptions([])
     }
-  }, [field, open, supportsOptions])
+
+    if (isDataTable) {
+      const parsedConfig = parseRepeatableGroupConfig(field.repeatableConfig)
+      if (parsedConfig) {
+        const nextColumns: TableColumnState[] = []
+        parsedConfig.columns.forEach((column, index) => {
+          const id = crypto.randomUUID?.() ?? `${column.key}-${index}`
+          const baseKey = slugify(column.key || column.label || `column_${index + 1}`)
+          const key = ensureUniqueColumnKey(baseKey, nextColumns, id)
+
+          nextColumns.push({
+            id,
+            label: column.label,
+            key,
+            type: COLUMN_TYPE_OPTIONS.some((option) => option.value === column.type)
+              ? column.type
+              : 'text',
+            required: Boolean(column.required),
+          })
+        })
+
+        setTableColumns(nextColumns.length > 0 ? nextColumns : [createColumnState('', [])])
+        setTableMinRows(
+          typeof parsedConfig.minRows === 'number' ? String(parsedConfig.minRows) : '0'
+        )
+        setTableMaxRows(
+          typeof parsedConfig.maxRows === 'number' ? String(parsedConfig.maxRows) : ''
+        )
+      } else {
+        setTableColumns([createColumnState('', [])])
+        setTableMinRows('0')
+        setTableMaxRows('')
+      }
+    } else {
+      setTableColumns([])
+      setTableMinRows('0')
+      setTableMaxRows('')
+    }
+  }, [field, open, supportsOptions, isDataTable])
 
   const handleOptionChange = (index: number, key: keyof OptionState, value: string) => {
     setOptions((prev) => {
@@ -89,7 +178,9 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
       if (key === 'label') {
         const prevLabel = item.label
         item.label = value
-        if (!item.value || item.value === slugify(prevLabel)) {
+        const prevSlug = slugify(prevLabel)
+        const normalizedValue = (item.value ?? '').replace(/-/g, '_')
+        if (!item.value || normalizedValue === prevSlug) {
           item.value = slugify(value)
         }
       } else {
@@ -102,11 +193,103 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
   }
 
   const handleAddOption = () => {
-    setOptions((prev) => [...prev, newOption()])
+    setOptions((prev) => {
+      if (prev.length >= MAX_DROPDOWN_OPTIONS) {
+        toast.error(`Limit dropdown options to ${MAX_DROPDOWN_OPTIONS}`)
+        return prev
+      }
+      return [...prev, newOption()]
+    })
   }
 
   const handleRemoveOption = (index: number) => {
     setOptions((prev) => prev.filter((_, idx) => idx !== index))
+  }
+
+  const handleColumnLabelChange = (id: string, value: string) => {
+    setTableColumns((prev) => {
+      const next = prev.map((column) => {
+        if (column.id !== id) {
+          return column
+        }
+
+        const baseKey = slugify(value || `column_${prev.indexOf(column) + 1}`)
+        return {
+          ...column,
+          label: value,
+          key: ensureUniqueColumnKey(baseKey, prev, id),
+        }
+      })
+
+      return next
+    })
+  }
+
+  const handleColumnTypeChange = (id: string, nextType: TableColumnType) => {
+    setTableColumns((prev) =>
+      prev.map((column) => (column.id === id ? { ...column, type: nextType } : column))
+    )
+  }
+
+  const handleColumnRequiredChange = (id: string, required: boolean) => {
+    setTableColumns((prev) =>
+      prev.map((column) => (column.id === id ? { ...column, required } : column))
+    )
+  }
+
+  const handleAddColumn = () => {
+    setTableColumns((prev) => {
+      if (prev.length >= MAX_DATA_TABLE_COLUMNS) {
+        toast.error(`Limit data table columns to ${MAX_DATA_TABLE_COLUMNS}`)
+        return prev
+      }
+
+      return [...prev, createColumnState('', prev)]
+    })
+  }
+
+  const handleRemoveColumn = (id: string) => {
+    setTableColumns((prev) => {
+      if (prev.length <= 1) {
+        toast.error('A data table needs at least one column')
+        return prev
+      }
+      return prev.filter((column) => column.id !== id)
+    })
+  }
+
+  const handleMinRowsChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value
+    if (value === '') {
+      setTableMinRows('0')
+      return
+    }
+
+    const digits = value.replace(/[^0-9]/g, '')
+    if (digits === '') {
+      setTableMinRows('0')
+      return
+    }
+
+    const numeric = Math.min(Number.parseInt(digits, 10) || 0, MAX_DATA_TABLE_ROWS)
+    setTableMinRows(String(numeric))
+  }
+
+  const handleMaxRowsChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value
+    if (value === '') {
+      setTableMaxRows('')
+      return
+    }
+
+    const digits = value.replace(/[^0-9]/g, '')
+    if (digits === '') {
+      setTableMaxRows('')
+      return
+    }
+
+    const numeric = Math.min(Math.max(Number.parseInt(digits, 10) || 1, 1), MAX_DATA_TABLE_ROWS)
+    setTableMaxRows(String(numeric))
   }
 
   const handleSave = () => {
@@ -133,6 +316,78 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
       optionPayload = cleanedOptions
     }
 
+    let repeatablePayload: FieldUpdateInput['repeatableConfig'] | undefined
+    if (isDataTable) {
+      const seenKeys = new Set<string>()
+      const cleanedColumns = tableColumns
+        .map((column, index) => {
+          const label = column.label.trim()
+          if (!label) {
+            return null
+          }
+
+          const baseKey = slugify(column.key || label || `column_${index + 1}`)
+          let keyCandidate = baseKey || `column_${index + 1}`
+          let counter = 2
+          while (seenKeys.has(keyCandidate)) {
+            keyCandidate = `${baseKey || 'column'}_${counter}`
+            counter += 1
+          }
+          seenKeys.add(keyCandidate)
+
+          return {
+            key: keyCandidate,
+            label,
+            type: column.type,
+            required: column.required ?? false,
+          }
+        })
+        .filter((column): column is NonNullable<typeof column> => column !== null)
+
+      if (cleanedColumns.length === 0) {
+        toast.error('Add at least one column with a label')
+        return
+      }
+
+      if (cleanedColumns.length > MAX_DATA_TABLE_COLUMNS) {
+        toast.error(`Limit data table columns to ${MAX_DATA_TABLE_COLUMNS}`)
+        return
+      }
+
+      const parsedMinRows = Number.parseInt(tableMinRows, 10)
+      const minRows = Number.isNaN(parsedMinRows)
+        ? 0
+        : Math.min(Math.max(parsedMinRows, 0), MAX_DATA_TABLE_ROWS)
+
+      const trimmedMaxRows = tableMaxRows.trim()
+      let maxRows: number | undefined
+      if (trimmedMaxRows !== '') {
+        const parsedMaxRows = Number.parseInt(trimmedMaxRows, 10)
+        if (Number.isNaN(parsedMaxRows)) {
+          toast.error('Maximum rows must be a number')
+          return
+        }
+        maxRows = Math.min(Math.max(parsedMaxRows, 1), MAX_DATA_TABLE_ROWS)
+      }
+
+      if (typeof maxRows === 'number' && maxRows < minRows) {
+        toast.error('Maximum rows must be greater than or equal to minimum rows')
+        return
+      }
+
+      repeatablePayload = {
+        columns: cleanedColumns,
+      }
+
+      if (minRows > 0) {
+        repeatablePayload.minRows = minRows
+      }
+
+      if (typeof maxRows === 'number') {
+        repeatablePayload.maxRows = maxRows
+      }
+    }
+
     startTransition(async () => {
       try {
         const result = await updateField(field.id, {
@@ -141,6 +396,7 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
           placeholder: placeholderValue.trim() || undefined,
           isRequired,
           options: optionPayload,
+          repeatableConfig: repeatablePayload,
         })
         if (!result.success) {
           toast.error(result.error)
@@ -212,24 +468,40 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground">Options</h3>
-                <Button variant="outline" size="sm" onClick={handleAddOption}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddOption}
+                  disabled={options.length >= MAX_DROPDOWN_OPTIONS}
+                >
                   Add option
                 </Button>
               </div>
               <div className="space-y-3">
+                <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center sm:gap-2 sm:px-1">
+                  <span className="text-xs font-medium text-muted-foreground">Drop-down value</span>
+                  <span className="text-xs font-medium text-muted-foreground">Database field</span>
+                  <span className="text-xs font-medium text-muted-foreground text-right">Actions</span>
+                </div>
                 {options.map((option, index) => (
-                  <div key={option.key} className="flex flex-wrap items-center gap-2">
+                  <div
+                    key={option.key}
+                    className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center"
+                  >
                     <Input
                       className="flex-1"
                       placeholder={`Option ${index + 1} label`}
                       value={option.label}
+                      aria-label={`Option ${index + 1} drop-down value`}
                       onChange={(event) => handleOptionChange(index, 'label', event.target.value)}
                     />
                     <Input
-                      className="flex-1"
+                      className="flex-1 bg-muted text-muted-foreground"
                       placeholder="Value"
                       value={option.value}
-                      onChange={(event) => handleOptionChange(index, 'value', event.target.value)}
+                      aria-label="Database field"
+                      readOnly
+                      tabIndex={-1}
                     />
                     <Button
                       type="button"
@@ -245,6 +517,138 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
                 {options.length === 0 && (
                   <p className="text-xs text-muted-foreground">No options yet. Add at least one before saving.</p>
                 )}
+                {options.length >= MAX_DROPDOWN_OPTIONS && (
+                  <p className="text-xs text-muted-foreground">
+                    Maximum of {MAX_DROPDOWN_OPTIONS} options reached.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isDataTable && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Data table structure</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddColumn}
+                  disabled={tableColumns.length >= MAX_DATA_TABLE_COLUMNS}
+                >
+                  Add column
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {tableColumns.map((column, index) => {
+                  const labelId = `table-column-label-${column.id}`
+                  const keyId = `table-column-key-${column.id}`
+                  const typeId = `table-column-type-${column.id}`
+                  const requiredId = `table-column-required-${column.id}`
+
+                  return (
+                    <div key={column.id} className="space-y-3 rounded-md border p-3">
+                      <div className="space-y-2">
+                        <Label htmlFor={labelId}>Column label</Label>
+                        <Input
+                          id={labelId}
+                          placeholder={`Column ${index + 1} label`}
+                          value={column.label}
+                          onChange={(event) => handleColumnLabelChange(column.id, event.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
+                        <div className="space-y-1">
+                          <Label htmlFor={keyId}>Database field</Label>
+                          <Input
+                            id={keyId}
+                            value={column.key}
+                            readOnly
+                            tabIndex={-1}
+                            className="bg-muted text-muted-foreground"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={typeId}>Input type</Label>
+                          <Select
+                            value={column.type}
+                            onValueChange={(value) => handleColumnTypeChange(column.id, value as TableColumnType)}
+                          >
+                            <SelectTrigger id={typeId}>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COLUMN_TYPE_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-xs font-medium text-muted-foreground">Required</span>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id={requiredId}
+                              checked={column.required}
+                              onCheckedChange={(checked) => handleColumnRequiredChange(column.id, checked)}
+                            />
+                            <Label htmlFor={requiredId}>Required</Label>
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveColumn(column.id)}
+                            disabled={tableColumns.length <= 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {tableColumns.length >= MAX_DATA_TABLE_COLUMNS && (
+                  <p className="text-xs text-muted-foreground">
+                    Maximum of {MAX_DATA_TABLE_COLUMNS} columns per data table.
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="data-table-min-rows">Minimum rows</Label>
+                  <Input
+                    id="data-table-min-rows"
+                    type="number"
+                    min={0}
+                    max={MAX_DATA_TABLE_ROWS}
+                    value={tableMinRows}
+                    onChange={handleMinRowsChange}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Users can remove rows down to this number.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="data-table-max-rows">Maximum rows</Label>
+                  <Input
+                    id="data-table-max-rows"
+                    type="number"
+                    min={1}
+                    max={MAX_DATA_TABLE_ROWS}
+                    value={tableMaxRows}
+                    onChange={handleMaxRowsChange}
+                    placeholder="Unlimited"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank for unlimited rows (up to {MAX_DATA_TABLE_ROWS}).
+                  </p>
+                </div>
               </div>
             </div>
           )}

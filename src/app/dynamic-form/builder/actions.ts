@@ -6,6 +6,22 @@ import { prisma } from '@/lib/prisma'
 import { Prisma, FieldType } from '@prisma/client'
 import { z } from 'zod'
 
+const MAX_REPEATABLE_COLUMNS = 8
+const MAX_REPEATABLE_ROWS = 25
+const MAX_DROPDOWN_OPTIONS = 50
+
+const DEFAULT_REPEATABLE_CONFIG: Prisma.InputJsonValue = {
+  columns: [
+    {
+      key: 'value',
+      label: 'Value',
+      type: 'text',
+      required: true,
+    },
+  ],
+  minRows: 0,
+}
+
 const createTemplateSchema = z.object({
   name: z.string().min(1),
   description: z.string().max(1000).optional(),
@@ -24,12 +40,58 @@ const fieldOptionInputSchema = z.object({
   value: z.string().min(1, 'Option value is required'),
 })
 
+const repeatableColumnSchema = z.object({
+  key: z
+    .string()
+    .min(1, 'Column key is required')
+    .regex(/^[a-z0-9_]+$/, 'Use lowercase letters, numbers, or underscores'),
+  label: z.string().min(1, 'Column label is required'),
+  type: z.enum(['text', 'textarea', 'number']),
+  required: z.boolean().optional(),
+})
+
+const repeatableConfigSchema = z
+  .object({
+    columns: z
+      .array(repeatableColumnSchema)
+      .min(1, 'Add at least one column')
+      .max(MAX_REPEATABLE_COLUMNS, `Limit columns to ${MAX_REPEATABLE_COLUMNS}`),
+    minRows: z
+      .number()
+      .int('Minimum rows must be an integer')
+      .min(0)
+      .max(MAX_REPEATABLE_ROWS)
+      .optional(),
+    maxRows: z
+      .number()
+      .int('Maximum rows must be an integer')
+      .min(1)
+      .max(MAX_REPEATABLE_ROWS)
+      .optional(),
+  })
+  .refine(
+    (value) => {
+      if (typeof value.maxRows !== 'number') {
+        return true
+      }
+      if (typeof value.minRows !== 'number') {
+        return true
+      }
+      return value.maxRows >= value.minRows
+    },
+    {
+      message: 'Maximum rows must be greater than or equal to minimum rows',
+      path: ['maxRows'],
+    }
+  )
+
 const fieldUpdateSchema = z.object({
   label: z.string().min(1, 'Label is required'),
   helpText: z.string().max(2000).optional(),
   placeholder: z.string().max(255).optional(),
   isRequired: z.boolean().default(false),
-  options: z.array(fieldOptionInputSchema).optional(),
+  options: z.array(fieldOptionInputSchema).max(MAX_DROPDOWN_OPTIONS, `Limit options to ${MAX_DROPDOWN_OPTIONS}`).optional(),
+  repeatableConfig: repeatableConfigSchema.optional(),
 })
 
 const templateMetadataSchema = z.object({
@@ -305,6 +367,7 @@ export async function createField(sectionId: string, input: FieldInput): Promise
         fieldCode: uniqueCode,
         order: nextOrder,
         isRequired: false,
+        repeatableConfig: input.type === FieldType.REPEATABLE_GROUP ? DEFAULT_REPEATABLE_CONFIG : undefined,
       },
     })
 
@@ -329,6 +392,7 @@ export async function updateField(fieldId: string, input: FieldUpdateInput): Pro
       select: {
         id: true,
         type: true,
+        repeatableConfig: true,
         section: {
           select: {
             templateId: true,
@@ -348,14 +412,24 @@ export async function updateField(fieldId: string, input: FieldUpdateInput): Pro
     ])
 
     await prisma.$transaction(async (tx) => {
+      const updateData: Prisma.FormQuestionUpdateInput = {
+        label: parsedInput.label,
+        helpText: parsedInput.helpText,
+        placeholder: parsedInput.placeholder,
+        isRequired: parsedInput.isRequired ?? false,
+      }
+
+      if (question.type === FieldType.REPEATABLE_GROUP) {
+        const existingConfig = question.repeatableConfig as Prisma.InputJsonValue | null
+        const config = parsedInput.repeatableConfig ?? existingConfig
+        updateData.repeatableConfig = (config ?? DEFAULT_REPEATABLE_CONFIG) as Prisma.InputJsonValue
+      } else if (parsedInput.repeatableConfig !== undefined) {
+        updateData.repeatableConfig = Prisma.JsonNull
+      }
+
       await tx.formQuestion.update({
         where: { id: parsedId },
-        data: {
-          label: parsedInput.label,
-          helpText: parsedInput.helpText,
-          placeholder: parsedInput.placeholder,
-          isRequired: parsedInput.isRequired ?? false,
-        },
+        data: updateData,
       })
 
       if (selectionTypes.has(question.type)) {

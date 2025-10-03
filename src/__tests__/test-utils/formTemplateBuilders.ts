@@ -22,6 +22,7 @@ export function createMockQuestion(
     conditional: overrides.conditional ?? null,
     order: overrides.order ?? 0,
     isRequired: overrides.isRequired ?? false,
+    repeatableConfig: overrides.repeatableConfig ?? null,
     options: overrides.options ?? [],
     scoringConfig: overrides.scoringConfig ?? null,
   };

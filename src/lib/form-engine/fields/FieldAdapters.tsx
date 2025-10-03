@@ -8,13 +8,36 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScoringComponent } from '@/components/form/ScoringComponent';
 import { DynamicScoringMatrix } from '@/components/form/DynamicScoringMatrix';
-import { FieldProps } from '../types';
+import { FieldProps, RepeatableFieldConfig } from '../types';
 import {
   getInfoBoxStyle,
   isInfoBoxMetadata,
   parseValidationMetadata,
+  parseRepeatableGroupConfig,
 } from '../json-utils';
 import { Trash2, Plus } from 'lucide-react';
+
+const DEFAULT_REPEATABLE_COLUMNS: RepeatableFieldConfig[] = [
+  { key: 'value', label: 'Value', type: 'text', required: true },
+];
+
+const LEGACY_REPEATABLE_COLUMNS: Record<string, RepeatableFieldConfig[]> = {
+  'F4.2.a': [
+    { key: 'company', label: 'Company', type: 'text', required: true },
+    { key: 'product', label: 'Product or Solution', type: 'text', required: true },
+    { key: 'description', label: 'Description and Key Features', type: 'textarea', required: true },
+    { key: 'revenue', label: 'Revenue or Market Share', type: 'text', required: false },
+  ],
+  'F6.4': [
+    { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'expertise', label: 'Expertise', type: 'text', required: true },
+    { key: 'contact', label: 'Contact Information', type: 'text', required: true },
+  ],
+};
+
+function getLegacyRepeatableColumns(fieldCode: string): RepeatableFieldConfig[] {
+  return LEGACY_REPEATABLE_COLUMNS[fieldCode] ?? DEFAULT_REPEATABLE_COLUMNS;
+}
 
 // Short text field adapter
 const ShortTextFieldComponent: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
@@ -225,54 +248,46 @@ const ScoringField: React.FC<FieldProps> = ({ question, value, onChange, error }
 const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, onChange, error, disabled }) => {
   const rows = Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
 
-  // Get field configuration from question metadata
-  const getFieldConfig = () => {
-    const fieldCode = question.fieldCode;
+  const parsedConfig = useMemo(() => parseRepeatableGroupConfig(question.repeatableConfig), [question.repeatableConfig]);
+  const legacyColumns = useMemo(() => getLegacyRepeatableColumns(question.fieldCode), [question.fieldCode]);
 
-    // Competitive landscape table (F4.2.a)
-    if (fieldCode === 'F4.2.a') {
-      return [
-        { key: 'company', label: 'Company', type: 'text', required: true },
-        { key: 'product', label: 'Product or Solution', type: 'text', required: true },
-        { key: 'description', label: 'Description and Key Features', type: 'textarea', required: true },
-        { key: 'revenue', label: 'Revenue or Market Share', type: 'text', required: false }
-      ];
+  const columns = useMemo(() => {
+    if (parsedConfig?.columns && parsedConfig.columns.length > 0) {
+      return parsedConfig.columns;
     }
+    return legacyColumns;
+  }, [parsedConfig, legacyColumns]);
 
-    // Subject matter experts table (F6.4)
-    if (fieldCode === 'F6.4') {
-      return [
-        { key: 'name', label: 'Name', type: 'text', required: true },
-        { key: 'expertise', label: 'Expertise', type: 'text', required: true },
-        { key: 'contact', label: 'Contact Information', type: 'text', required: true }
-      ];
+  const resolvedColumns = columns.length > 0 ? columns : DEFAULT_REPEATABLE_COLUMNS;
+  const minRows = parsedConfig?.minRows ?? 0;
+  const maxRows = parsedConfig?.maxRows;
+
+  const canAddRow = typeof maxRows !== 'number' || rows.length < maxRows;
+  const canRemoveRows = rows.length > (minRows ?? 0);
+
+  const handleAddRow = () => {
+    if (!canAddRow) {
+      return;
     }
-
-    // Default configuration
-    return [
-      { key: 'value', label: 'Value', type: 'text', required: true }
-    ];
-  };
-
-  const fieldConfig = getFieldConfig();
-
-  const addRow = () => {
     const newRow: Record<string, unknown> = {};
-    fieldConfig.forEach(field => {
-      newRow[field.key] = '';
+    resolvedColumns.forEach((column) => {
+      newRow[column.key] = '';
     });
-    onChange([...rows, newRow] as unknown as Record<string, unknown>);
+    onChange([...rows, newRow]);
   };
 
-  const removeRow = (index: number) => {
+  const handleRemoveRow = (index: number) => {
+    if (!canRemoveRows) {
+      return;
+    }
     const newRows = rows.filter((_, i) => i !== index);
-    onChange(newRows as unknown as Record<string, unknown>);
+    onChange(newRows);
   };
 
-  const updateRow = (index: number, field: string, newValue: string) => {
+  const handleUpdateRow = (index: number, key: string, nextValue: string) => {
     const newRows = [...rows];
-    newRows[index] = { ...newRows[index], [field]: newValue };
-    onChange(newRows as unknown as Record<string, unknown>);
+    newRows[index] = { ...newRows[index], [key]: nextValue };
+    onChange(newRows);
   };
 
   return (
@@ -282,10 +297,10 @@ const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, onChange,
           <Table>
             <TableHeader>
               <TableRow>
-                {fieldConfig.map((field) => (
-                  <TableHead key={field.key}>
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
+                {resolvedColumns.map((column) => (
+                  <TableHead key={column.key}>
+                    {column.label}
+                    {column.required && <span className="ml-1 text-red-500">*</span>}
                   </TableHead>
                 ))}
                 <TableHead className="w-[100px]">Actions</TableHead>
@@ -294,34 +309,40 @@ const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, onChange,
             <TableBody>
               {rows.map((row, index) => (
                 <TableRow key={index}>
-                  {fieldConfig.map((field) => (
-                    <TableCell key={field.key}>
-                      {field.type === 'textarea' ? (
-                        <Textarea
-                          value={String(row[field.key] || '')}
-                          onChange={(e) => updateRow(index, field.key, e.target.value)}
-                          placeholder={`Enter ${field.label.toLowerCase()}`}
-                          disabled={disabled}
-                          className="min-h-[60px]"
-                          rows={2}
-                        />
-                      ) : (
-                        <Input
-                          value={String(row[field.key] || '')}
-                          onChange={(e) => updateRow(index, field.key, e.target.value)}
-                          placeholder={`Enter ${field.label.toLowerCase()}`}
-                          disabled={disabled}
-                        />
-                      )}
-                    </TableCell>
-                  ))}
-                  <TableCell>
+                  {resolvedColumns.map((column) => {
+                    const cellValue = row[column.key];
+                    const stringValue = cellValue === null || cellValue === undefined ? '' : String(cellValue);
+
+                    return (
+                      <TableCell key={column.key}>
+                        {column.type === 'textarea' ? (
+                          <Textarea
+                            value={stringValue}
+                            onChange={(event) => handleUpdateRow(index, column.key, event.target.value)}
+                            placeholder={`Enter ${column.label.toLowerCase()}`}
+                            disabled={disabled}
+                            className="min-h-[60px]"
+                            rows={2}
+                          />
+                        ) : (
+                          <Input
+                            type={column.type === 'number' ? 'number' : 'text'}
+                            value={stringValue}
+                            onChange={(event) => handleUpdateRow(index, column.key, event.target.value)}
+                            placeholder={`Enter ${column.label.toLowerCase()}`}
+                            disabled={disabled}
+                          />
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-right">
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeRow(index)}
-                      disabled={disabled}
+                      onClick={() => handleRemoveRow(index)}
+                      disabled={disabled || !canRemoveRows}
                       className="h-8 w-8 p-0"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -334,20 +355,32 @@ const RepeatableGroupField: React.FC<FieldProps> = ({ question, value, onChange,
         </div>
       )}
 
-      <Button
-        type="button"
-        variant="outline"
-        onClick={addRow}
-        disabled={disabled}
-        className="w-full"
-      >
-        <Plus className="mr-2 h-4 w-4" />
-        Add {fieldConfig.length > 1 ? 'Row' : 'Item'}
-      </Button>
+      <div className="space-y-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleAddRow}
+          disabled={disabled || !canAddRow}
+          className="w-full"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add row
+        </Button>
+        {typeof maxRows === 'number' && rows.length >= maxRows && (
+          <p className="text-xs text-muted-foreground text-center">
+            Maximum of {maxRows} rows reached.
+          </p>
+        )}
+        {rows.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center">
+            No entries yet. Click "Add row" to create the first entry.
+          </p>
+        )}
+      </div>
 
-      {rows.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-6">
-          No entries yet. Click {`"Add ${fieldConfig.length > 1 ? 'Row' : 'Item'}"`} to get started.
+      {typeof minRows === 'number' && minRows > 0 && (
+        <p className="text-xs text-muted-foreground text-center">
+          At least {minRows} {minRows === 1 ? 'row is' : 'rows are'} required.
         </p>
       )}
     </div>

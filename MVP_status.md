@@ -1,6 +1,6 @@
 # MVP Implementation Status
 
-**Last Updated:** 2025-10-02
+**Last Updated:** 2025-10-03
 
 ## Completed
 - Phase 0 (Foundation Setup) from `formBuilderImplementationPlan.md`
@@ -56,15 +56,22 @@
   - Added scoring matrix table and impact vs value quadrant to exports, including recommendation pill styling
   - Ensured analytics section starts on a new page to prevent layout splits
   - Filtered guidance/info-box questions out of exports so reports show only actionable prompts
+- Phase 12 (Builder Data Tables & Limits)
+  - Added `repeatableConfig` JSON column to `FormQuestion` (Prisma migration `20251003152155_add_repeatable_config`)
+  - Builder UI now exposes Data Table column editor (labels, auto-generated keys, input types, required flag)
+  - Authors can set min/max row limits; renderer enforces constraints at runtime
+  - Dropdown options show labeled database keys, auto-slug with underscores, and enforce shared max counts
+  - Added `npm run dev:logs` / `npm run prisma:dev:logs` scripts that tee console output into `logs/`
 
 ## In Progress
 - Deployment hardening: migrate secrets to Key Vault once RBAC is granted
-- Export QA: add Playwright coverage for PDF downloads and scoring visuals
+- Builder QA: add Playwright coverage for data table editing, dropdown validation, and PDF exports
+- Documentation clean-up: roll Data Table guidance into non-technical admin guide & technical docs
 
 ## Upcoming
-- Phase 12: Integration testing with form renderer
-- Phase 13: Testing & validation (manual QA checklist + PDF spot-check)
-- Phase 14: Documentation & inline help (include PDF user guide + troubleshooting)
+- Phase 13: Integration testing with form renderer + automated regression coverage
+- Phase 14: Testing & validation (manual QA checklist + PDF spot-check)
+- Phase 15: Documentation & inline help (PDF user guide, troubleshooting, admin tips)
 
 ## Notes
 - No schema changes or new migrations were required for Phase 0.

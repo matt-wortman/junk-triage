@@ -149,20 +149,118 @@ The database needs to store:
 
 The project includes shadcn MCP server configuration in `.mcp.json` for easy component management.
 
+## Environment Modes
+
+This project supports **three distinct database/runtime modes**. Choose the right one for your workflow:
+
+### 1. Prisma Dev Server Mode (Default - Fast Local Iteration)
+**Best for**: Quick UI/API iteration without Docker overhead
+
+**Start commands (in separate terminals):**
+```bash
+# Terminal 1: Start Prisma Dev Server
+npx dotenv-cli -e .env.prisma-dev -- npx prisma dev
+
+# Terminal 2: Start Next.js dev server
+npm run dev  # Uses .env.prisma-dev, Turbopack enabled
+```
+
+**Relevant files**: `.env.prisma-dev`
+**Database location**: Prisma-managed local service (`prisma+postgres://localhost:51213/...`)
+**Ports**: Prisma runs on 51213-51215, Next.js on 3000
+
+**Optional tools:**
+```bash
+npm run studio          # Prisma Studio (uses .env.prisma-dev)
+npm run db:seed:dev     # Seed dev database
+```
+
+**Teardown:**
+- `Ctrl+C` both terminals
+- Prisma leaves data in `.prisma-server` directory (no cleanup needed)
+
+---
+
+### 2. Local Docker Postgres Mode (Integration Testing)
+**Best for**: Testing against containerized Postgres, parity with deployment
+
+**Start commands:**
+```bash
+# Start Postgres container
+docker-compose up -d database
+
+# Start Next.js with .env (not .env.prisma-dev)
+npx dotenv-cli -e .env -- next dev
+
+# OR for production build testing:
+npm run build
+npx next start -p 3001
+```
+
+**Relevant files**: `.env`
+**Database location**: Docker container (`localhost:5432`)
+**Ports**: Postgres on 5432, Next.js on 3000 (or custom)
+
+**Teardown:**
+```bash
+docker-compose down
+```
+
+---
+
+### 3. Azure Production Mode (Live Deployment)
+**Best for**: Production runtime, debugging Azure-specific issues
+
+**Database location**: Azure Database for PostgreSQL Flex (remote)
+**Configuration**: App Service environment variables
+**Entry script**: `scripts/start.sh` runs migrations + optional seed
+**Control seeding**: Set `RUN_PRISMA_SEED=true/false` in App Service config
+
+**Manual operations:**
+```bash
+# SSH into container
+az webapp ssh -g <resource-group> -n <app-name>
+
+# Tail logs
+az webapp log tail -g <resource-group> -n <app-name>
+```
+
+---
+
+### Switching Between Modes
+
+**Important**: Only one mode should be active at a time. Before switching:
+```bash
+# Kill any process on port 3000
+lsof -ti:3000 | xargs -r kill -9
+```
+
+| From → To | Steps |
+|-----------|-------|
+| **Prisma Dev → Docker** | Stop both dev terminals (`Ctrl+C`), run `docker-compose up -d database`, start Next with `.env` |
+| **Prisma Dev → Azure** | Stop dev servers, `npm run build`, deploy container to Azure |
+| **Docker → Prisma Dev** | Run `docker-compose down`, start Prisma dev + Next.js dev servers |
+
+**See also**: `ENVIRONMENT_MODES.md` for detailed troubleshooting and pitfalls
+
+---
+
 ## Commands
 
 ### Development Server
-- `npm run dev` - Start development server (currently running on http://localhost:3000)
-- `npm run build` - Production build
+- `npm run dev` - Start Next.js dev server (uses `.env.prisma-dev`, Turbopack enabled)
+- `npm run dev:classic` - Start Next.js dev server (uses `.env`, classic mode)
+- `npm run build` - Production build with Turbopack
 - `npm run start` - Production server
 - `npm run lint` - ESLint
 - `npm run type-check` or `npx tsc --noEmit` - TypeScript checking
 
 ### Database Commands
-- `npx prisma dev` - Start local Prisma PostgreSQL server (currently running on ports 51213-51215)
+- `npx dotenv-cli -e .env.prisma-dev -- npx prisma dev` - Start Prisma Dev Server
 - `npx prisma migrate dev` - Create and apply database migrations
 - `npx prisma generate` - Generate Prisma client
-- `npx prisma studio` - Open Prisma Studio database browser
+- `npm run studio` - Open Prisma Studio (uses `.env.prisma-dev`)
+- `npm run db:seed:dev` - Seed dev database
 
 ## Current Project Status (Updated: 2025-09-23)
 

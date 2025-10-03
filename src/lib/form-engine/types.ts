@@ -1,4 +1,4 @@
-import { FieldType, FormTemplate, FormSection, FormQuestion, QuestionOption, ScoringConfig } from '@prisma/client';
+import { FieldType, FormTemplate, FormSection, FormQuestion, QuestionOption, ScoringConfig, Prisma } from '@prisma/client';
 
 // Extended types with relationships for the form engine
 export type FormTemplateWithSections = FormTemplate & {
@@ -9,7 +9,21 @@ export type FormSectionWithQuestions = FormSection & {
   questions: FormQuestionWithDetails[];
 };
 
-export type FormQuestionWithDetails = FormQuestion & {
+export type RepeatableFieldConfig = {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number';
+  required?: boolean;
+};
+
+export type RepeatableGroupConfig = {
+  columns: RepeatableFieldConfig[];
+  minRows?: number;
+  maxRows?: number;
+};
+
+export type FormQuestionWithDetails = Omit<FormQuestion, 'repeatableConfig'> & {
+  repeatableConfig: Prisma.JsonValue | null;
   options: QuestionOption[];
   scoringConfig: ScoringConfig | null;
 };

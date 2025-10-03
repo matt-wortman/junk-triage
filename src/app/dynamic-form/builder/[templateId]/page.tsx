@@ -5,14 +5,17 @@ import { PreviewMode } from '@/components/form-builder/PreviewMode'
 export const dynamic = 'force-dynamic'
 
 interface BuilderEditorPageProps {
-  params: {
+  params: Promise<{
+    templateId: string
+  }> | {
     templateId: string
   }
   searchParams?: Record<string, string | string[] | undefined>
 }
 
 export default async function BuilderEditorPage({ params, searchParams }: BuilderEditorPageProps) {
-  const template = await getTemplateDetail(params.templateId)
+  const resolvedParams = await params
+  const template = await getTemplateDetail(resolvedParams.templateId)
 
   if (!template) {
     notFound()
