@@ -33,9 +33,21 @@ function read_secret() {
     --query value -o tsv
 }
 
-POSTGRES_ADMIN="${POSTGRES_ADMIN:-$(read_secret "$KEY_VAULT_NAME" "$POSTGRES_ADMIN_SECRET_NAME")}"
-POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(read_secret "$KEY_VAULT_NAME" "$POSTGRES_PASSWORD_SECRET_NAME")}"
-NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(read_secret "$KEY_VAULT_NAME" "$NEXTAUTH_SECRET_SECRET_NAME")}"
+# Resolve required secrets. Prefer environment variables (current workflow)
+# and only fall back to Key Vault when a value is missing.
+if [[ -z "${POSTGRES_ADMIN:-}" || -z "${POSTGRES_PASSWORD:-}" || -z "${NEXTAUTH_SECRET:-}" ]]; then
+  if [[ -z "${POSTGRES_ADMIN:-}" ]]; then
+    POSTGRES_ADMIN="$(read_secret "$KEY_VAULT_NAME" "$POSTGRES_ADMIN_SECRET_NAME")"
+  fi
+
+  if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
+    POSTGRES_PASSWORD="$(read_secret "$KEY_VAULT_NAME" "$POSTGRES_PASSWORD_SECRET_NAME")"
+  fi
+
+  if [[ -z "${NEXTAUTH_SECRET:-}" ]]; then
+    NEXTAUTH_SECRET="$(read_secret "$KEY_VAULT_NAME" "$NEXTAUTH_SECRET_SECRET_NAME")"
+  fi
+fi
 
 if [[ -z "$POSTGRES_ADMIN" || -z "$POSTGRES_PASSWORD" || -z "$NEXTAUTH_SECRET" ]]; then
   echo "Required secrets could not be resolved. Ensure Key Vault entries exist or pass env vars." >&2

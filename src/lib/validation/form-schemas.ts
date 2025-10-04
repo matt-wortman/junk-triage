@@ -14,6 +14,7 @@ export const fieldValidationSchemas = {
   [FieldType.SCORING_0_3]: z.number().int('Score must be a whole number').min(0, 'Score must be at least 0').max(3, 'Score must be at most 3'),
   [FieldType.SCORING_MATRIX]: z.unknown().optional(),
   [FieldType.REPEATABLE_GROUP]: z.array(z.record(z.string(), z.string())).optional(),
+  [FieldType.DATA_TABLE_SELECTOR]: z.array(z.record(z.string(), z.any())).optional(),
 };
 
 // Optional versions for non-required fields
@@ -28,6 +29,7 @@ export const optionalFieldValidationSchemas = {
   [FieldType.SCORING_0_3]: z.number().int('Score must be a whole number').min(0, 'Score must be at least 0').max(3, 'Score must be at most 3').optional(),
   [FieldType.SCORING_MATRIX]: z.unknown().optional(),
   [FieldType.REPEATABLE_GROUP]: z.array(z.record(z.string(), z.string())).optional(),
+  [FieldType.DATA_TABLE_SELECTOR]: z.array(z.record(z.string(), z.any())).optional(),
 };
 
 // Specific validation schemas for known field codes
@@ -93,6 +95,10 @@ export function getFieldValidationSchema(
     return fieldValidationSchemas[fieldType];
   }
 
+  if (fieldType === FieldType.DATA_TABLE_SELECTOR) {
+    return fieldValidationSchemas[fieldType];
+  }
+
   // Use required or optional schema based on field requirements
   const baseSchema = isRequired
     ? fieldValidationSchemas[fieldType]
@@ -114,6 +120,33 @@ export function validateField(
   try {
     const schema = getFieldValidationSchema(fieldCode, fieldType, isRequired, customValidation);
     schema.parse(value);
+
+    if (fieldType === FieldType.DATA_TABLE_SELECTOR) {
+      const rows = Array.isArray(value) ? (value as Array<Record<string, unknown>>) : [];
+      const hasSelection = rows.some((row) => Boolean(row.include));
+      const missingNotes = rows.some((row) => {
+        if (!row.include) {
+          return false;
+        }
+        const noteValue = typeof row.benefit === 'string' ? row.benefit.trim() : '';
+        return noteValue.length === 0;
+      });
+
+      if (missingNotes) {
+        return {
+          isValid: false,
+          error: 'Provide a benefit description for each selected stakeholder.',
+        };
+      }
+
+      if (isRequired && !hasSelection) {
+        return {
+          isValid: false,
+          error: 'Select at least one stakeholder or mark the field as not required.',
+        };
+      }
+    }
+
     return { isValid: true };
   } catch (error) {
     if (error instanceof z.ZodError) {

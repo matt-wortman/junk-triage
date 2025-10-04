@@ -332,14 +332,16 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
   const isRequired = shouldRequireField(conditionalConfig, question.isRequired, responses);
 
   // Get field value - handle repeatable groups separately
-  const value = question.type === 'REPEATABLE_GROUP'
+  const usesRepeatGroup = question.type === FieldType.REPEATABLE_GROUP || question.type === FieldType.DATA_TABLE_SELECTOR;
+
+  const value = usesRepeatGroup
     ? repeatGroups[question.fieldCode] ?? []
     : responses[question.fieldCode] ?? getDefaultValue(question.type);
 
   // Handle value changes - route arrays to repeatGroups, others to responses
   const handleChange = (newValue: string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]) => {
     // ✅ UPDATE state immediately for responsive UI
-    if (question.type === 'REPEATABLE_GROUP' && Array.isArray(newValue)) {
+    if (usesRepeatGroup && Array.isArray(newValue)) {
       setRepeatGroupData(question.fieldCode, newValue as Record<string, unknown>[]);
     } else {
       setResponse(question.fieldCode, newValue as string | number | boolean | string[] | Record<string, unknown>);

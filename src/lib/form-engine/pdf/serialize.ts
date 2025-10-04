@@ -18,7 +18,7 @@ import {
 } from './types';
 import { parseConditionalConfig } from '../conditional-logic';
 import { shouldShowField } from '../conditional-logic';
-import { parseValidationMetadata, isInfoBoxMetadata } from '../json-utils';
+import { parseValidationMetadata, isInfoBoxMetadata, parseRepeatableGroupConfig } from '../json-utils';
 import {
   extractScoringInputs,
   calculateAllScores,
@@ -114,16 +114,19 @@ function buildPrintableQuestion(
     return null;
   }
 
-  const repeatGroupRows = question.type === FieldType.REPEATABLE_GROUP
-    ? buildRepeatGroupRows(question.fieldCode, repeatGroups)
-    : undefined;
+  let repeatGroupRows: PrintableRepeatGroupRow[] | undefined;
+  let answerText: string | undefined;
 
-  const answerText = question.type === FieldType.REPEATABLE_GROUP
-    ? undefined
-    : formatAnswer(question, responses[question.fieldCode]);
+  if (question.type === FieldType.REPEATABLE_GROUP) {
+    repeatGroupRows = buildRepeatGroupRows(question.fieldCode, repeatGroups);
+  } else if (question.type === FieldType.DATA_TABLE_SELECTOR) {
+    repeatGroupRows = buildSelectorRows(question, repeatGroups);
+  } else {
+    answerText = formatAnswer(question, responses[question.fieldCode]);
+  }
 
-  const hasContent = question.type === FieldType.REPEATABLE_GROUP
-    ? (repeatGroupRows?.length ?? 0) > 0
+  const hasContent = repeatGroupRows
+    ? (repeatGroupRows.length ?? 0) > 0
     : Boolean(answerText && answerText.trim().length > 0);
 
   if (!isVisible && !hasContent) {
@@ -136,7 +139,7 @@ function buildPrintableQuestion(
     helpText: question.helpText,
     isRequired: question.isRequired,
     type: question.type,
-    answerText: question.type === FieldType.REPEATABLE_GROUP ? undefined : answerText || '—',
+    answerText: repeatGroupRows ? undefined : answerText || '—',
     repeatGroupRows,
   };
 }
@@ -154,6 +157,46 @@ function buildRepeatGroupRows(fieldCode: string, repeatGroups: RepeatableGroupDa
       value: formatStructuredValue(value),
     })),
   }));
+}
+
+function buildSelectorRows(
+  question: FormQuestionWithDetails,
+  repeatGroups: RepeatableGroupData
+): PrintableRepeatGroupRow[] | undefined {
+  const rows = repeatGroups[question.fieldCode];
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return undefined;
+  }
+
+  const config = parseRepeatableGroupConfig(question.repeatableConfig);
+  const selectorKey = config?.selectorColumnKey || 'include';
+  const noteColumn = config?.columns.find((column) => column.key !== selectorKey);
+  const noteKey = noteColumn?.key || 'benefit';
+  const rowLabelHeader = config?.rowLabel ?? question.label;
+  const rowsMap = new Map(config?.rows?.map((row) => [row.id, row.label]));
+
+  const selectedRows = rows.filter((row) => Boolean((row as Record<string, unknown>)[selectorKey]));
+  if (selectedRows.length === 0) {
+    return undefined;
+  }
+
+  return selectedRows.map((row, index) => {
+    const data = row as Record<string, unknown>;
+    const identifier = (data.__rowId as string) || (data.rowId as string);
+    const stakeholderLabel =
+      typeof data.rowLabel === 'string'
+        ? data.rowLabel
+        : (identifier && rowsMap.get(identifier)) || identifier || rowLabelHeader;
+    const benefit = typeof data[noteKey] === 'string' ? data[noteKey] : '';
+
+    return {
+      index: index + 1,
+      values: [
+        { field: rowLabelHeader, value: formatStructuredValue(stakeholderLabel) },
+        { field: noteColumn?.label ?? 'Notes', value: formatStructuredValue(benefit) },
+      ],
+    };
+  });
 }
 
 function formatAnswer(question: FormQuestionWithDetails, value: FormResponse[string]): string {

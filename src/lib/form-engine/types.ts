@@ -12,14 +12,28 @@ export type FormSectionWithQuestions = FormSection & {
 export type RepeatableFieldConfig = {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'number';
+  type: 'text' | 'textarea' | 'number' | 'checkbox';
   required?: boolean;
+  requiredWhenSelected?: boolean;
 };
+
+export interface RepeatablePredefinedRow {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export type RepeatableGroupMode = 'user' | 'predefined';
 
 export type RepeatableGroupConfig = {
   columns: RepeatableFieldConfig[];
   minRows?: number;
   maxRows?: number;
+  mode?: RepeatableGroupMode;
+  rowLabel?: string;
+  rows?: RepeatablePredefinedRow[];
+  selectorColumnKey?: string;
+  requireOnSelect?: string[];
 };
 
 export type FormQuestionWithDetails = Omit<FormQuestion, 'repeatableConfig'> & {

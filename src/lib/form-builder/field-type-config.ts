@@ -96,6 +96,12 @@ export const FIELD_TYPE_CONFIG: Record<FieldType, FieldTypeConfig> = {
     icon: Table,
     category: 'complex',
   },
+  DATA_TABLE_SELECTOR: {
+    label: 'Data Table with Selector',
+    description: 'Predefined rows with checkbox selector and notes field.',
+    icon: CheckSquare,
+    category: 'complex',
+  },
   SCORING_0_3: {
     label: 'Scoring (0-3)',
     description: 'Fixed four point scale for quick evaluations.',

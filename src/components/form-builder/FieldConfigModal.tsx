@@ -30,7 +30,7 @@ interface OptionState {
   key: string
 }
 
-type TableColumnType = 'text' | 'textarea' | 'number'
+type TableColumnType = 'text' | 'textarea' | 'number' | 'checkbox'
 
 interface TableColumnState {
   id: string
@@ -38,6 +38,11 @@ interface TableColumnState {
   key: string
   type: TableColumnType
   required: boolean
+}
+
+interface SelectorRowState {
+  id: string
+  label: string
 }
 
 const COLUMN_TYPE_OPTIONS: Array<{ value: TableColumnType; label: string }> = [
@@ -102,10 +107,16 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
   const [tableColumns, setTableColumns] = useState<TableColumnState[]>([])
   const [tableMinRows, setTableMinRows] = useState<string>('0')
   const [tableMaxRows, setTableMaxRows] = useState<string>('')
+  const [selectorRows, setSelectorRows] = useState<SelectorRowState[]>([])
+  const [selectorRowHeader, setSelectorRowHeader] = useState('Stakeholder')
+  const [selectorIncludeLabel, setSelectorIncludeLabel] = useState('Include?')
+  const [selectorNoteLabel, setSelectorNoteLabel] = useState('How do they benefit?')
+  const [requireNoteOnSelect, setRequireNoteOnSelect] = useState(true)
   const [pending, startTransition] = useTransition()
 
   const supportsOptions = useMemo(() => selectionTypes.has(field.type), [field.type])
   const isDataTable = field.type === FieldType.REPEATABLE_GROUP
+  const isSelectorDataTable = field.type === FieldType.DATA_TABLE_SELECTOR
 
   useEffect(() => {
     if (!open) return
@@ -168,7 +179,52 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
       setTableMinRows('0')
       setTableMaxRows('')
     }
-  }, [field, open, supportsOptions, isDataTable])
+    if (isSelectorDataTable) {
+      const parsedConfig = parseRepeatableGroupConfig(field.repeatableConfig)
+      if (parsedConfig?.mode === 'predefined') {
+        const selectorKey = parsedConfig.selectorColumnKey || 'include'
+        const checkboxColumn = parsedConfig.columns.find((column) => column.type === 'checkbox')
+        const noteColumn = parsedConfig.columns.find((column) => column.type !== 'checkbox')
+
+        setSelectorIncludeLabel(checkboxColumn?.label ?? 'Include?')
+        setSelectorNoteLabel(noteColumn?.label ?? 'How do they benefit?')
+        setRequireNoteOnSelect(
+          Boolean(
+            noteColumn?.requiredWhenSelected || parsedConfig.requireOnSelect?.includes(noteColumn?.key ?? '')
+          )
+        )
+        setSelectorRowHeader(parsedConfig.rowLabel ?? 'Stakeholder')
+
+        if (parsedConfig.rows && parsedConfig.rows.length > 0) {
+          setSelectorRows(
+            parsedConfig.rows.map((row, index) => ({
+              id: row.id || ensureUniqueColumnKey(`row_${index + 1}`, [], undefined),
+              label: row.label,
+            }))
+          )
+        } else {
+          setSelectorRows(createDefaultSelectorRows())
+        }
+
+        // lock min/max rows to predefined length
+        const totalRows = parsedConfig.rows?.length ?? selectorRows.length
+        setTableMinRows(String(totalRows))
+        setTableMaxRows(String(totalRows))
+      } else {
+        setSelectorIncludeLabel('Include?')
+        setSelectorNoteLabel('How do they benefit?')
+        setRequireNoteOnSelect(true)
+        setSelectorRowHeader('Stakeholder')
+        setSelectorRows(createDefaultSelectorRows())
+      }
+    } else {
+      setSelectorIncludeLabel('Include?')
+      setSelectorNoteLabel('How do they benefit?')
+      setRequireNoteOnSelect(true)
+      setSelectorRowHeader('Stakeholder')
+      setSelectorRows([])
+    }
+  }, [field, open, supportsOptions, isDataTable, isSelectorDataTable])
 
   const handleOptionChange = (index: number, key: keyof OptionState, value: string) => {
     setOptions((prev) => {
@@ -275,6 +331,64 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
     setTableMinRows(String(numeric))
   }
 
+  const createSelectorRowState = (label: string, existing: SelectorRowState[] = []): SelectorRowState => {
+    const baseKey = slugify(label || `row_${existing.length + 1}`)
+    const uniqueKey = ensureUniqueSelectorKey(baseKey, existing)
+    return {
+      id: uniqueKey,
+      label,
+    }
+  }
+
+  const ensureUniqueSelectorKey = (baseKey: string, rows: SelectorRowState[]): string => {
+    const sanitized = baseKey || 'row'
+    const used = new Set(rows.map((row) => row.id))
+    if (!used.has(sanitized)) {
+      return sanitized
+    }
+
+    let counter = 2
+    let candidate = `${sanitized}_${counter}`
+    while (used.has(candidate)) {
+      counter += 1
+      candidate = `${sanitized}_${counter}`
+    }
+    return candidate
+  }
+
+  const createDefaultSelectorRows = (): SelectorRowState[] => [
+    { id: 'patients', label: 'Patients' },
+    { id: 'caregivers', label: 'Caregivers' },
+    { id: 'clinicians', label: 'Clinicians' },
+  ]
+
+  const handleSelectorRowLabelChange = (id: string, value: string) => {
+    setSelectorRows((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, label: value } : row))
+    )
+  }
+
+  const handleAddSelectorRow = () => {
+    setSelectorRows((prev) => {
+      if (prev.length >= MAX_DATA_TABLE_ROWS) {
+        toast.error(`Limit data table rows to ${MAX_DATA_TABLE_ROWS}`)
+        return prev
+      }
+      const nextRow = createSelectorRowState('', prev)
+      return [...prev, nextRow]
+    })
+  }
+
+  const handleRemoveSelectorRow = (id: string) => {
+    setSelectorRows((prev) => {
+      if (prev.length <= 1) {
+        toast.error('A data table needs at least one row')
+        return prev
+      }
+      return prev.filter((row) => row.id !== id)
+    })
+  }
+
   const handleMaxRowsChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value
     if (value === '') {
@@ -317,7 +431,61 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
     }
 
     let repeatablePayload: FieldUpdateInput['repeatableConfig'] | undefined
-    if (isDataTable) {
+    if (isSelectorDataTable) {
+      const usedRowIds = new Set<string>()
+      const cleanedRows = selectorRows
+        .map((row, index) => {
+          const label = row.label.trim()
+          if (!label) {
+            return null
+          }
+
+          const baseId = row.id.trim() || slugify(label) || `row_${index + 1}`
+          let candidateId = baseId
+          let counter = 2
+          while (usedRowIds.has(candidateId)) {
+            candidateId = `${baseId}_${counter}`
+            counter += 1
+          }
+          usedRowIds.add(candidateId)
+
+          return {
+            id: candidateId,
+            label,
+          }
+        })
+        .filter((row): row is { id: string; label: string } => row !== null)
+
+      if (cleanedRows.length === 0) {
+        toast.error('Add at least one stakeholder row')
+        return
+      }
+
+      const includeLabel = selectorIncludeLabel.trim() || 'Include?'
+      const noteLabel = selectorNoteLabel.trim() || 'How do they benefit?'
+      const rowHeader = selectorRowHeader.trim() || 'Stakeholder'
+
+      repeatablePayload = {
+        mode: 'predefined',
+        rowLabel: rowHeader,
+        rows: cleanedRows,
+        selectorColumnKey: 'include',
+        requireOnSelect: requireNoteOnSelect ? ['benefit'] : [],
+        columns: [
+          {
+            key: 'include',
+            label: includeLabel,
+            type: 'checkbox',
+          },
+          {
+            key: 'benefit',
+            label: noteLabel,
+            type: 'textarea',
+            requiredWhenSelected: requireNoteOnSelect,
+          },
+        ],
+      }
+    } else if (isDataTable) {
       const seenKeys = new Set<string>()
       const cleanedColumns = tableColumns
         .map((column, index) => {
@@ -523,6 +691,84 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
                   </p>
                 )}
               </div>
+            </div>
+          )}
+
+          {isSelectorDataTable && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="selector-row-header">Row header label</Label>
+                  <Input
+                    id="selector-row-header"
+                    value={selectorRowHeader}
+                    onChange={(event) => setSelectorRowHeader(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="selector-include-label">Checkbox header</Label>
+                  <Input
+                    id="selector-include-label"
+                    value={selectorIncludeLabel}
+                    onChange={(event) => setSelectorIncludeLabel(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="selector-note-label">Notes header</Label>
+                  <Input
+                    id="selector-note-label"
+                    value={selectorNoteLabel}
+                    onChange={(event) => setSelectorNoteLabel(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Stakeholder rows</h3>
+                  <Button variant="outline" size="sm" onClick={handleAddSelectorRow}>
+                    Add stakeholder
+                  </Button>
+                </div>
+                {selectorRows.map((row, index) => (
+                  <div key={row.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <Input
+                      placeholder={`Stakeholder ${index + 1}`}
+                      value={row.label}
+                      onChange={(event) => handleSelectorRowLabelChange(row.id, event.target.value)}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveSelectorRow(row.id)}
+                        disabled={selectorRows.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {selectorRows.length >= MAX_DATA_TABLE_ROWS && (
+                  <p className="text-xs text-muted-foreground">
+                    Maximum of {MAX_DATA_TABLE_ROWS} rows reached.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="selector-require-note"
+                  checked={requireNoteOnSelect}
+                  onCheckedChange={(checked) => setRequireNoteOnSelect(Boolean(checked))}
+                />
+                <Label htmlFor="selector-require-note">Require notes when a stakeholder is selected</Label>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Stakeholders appear in a fixed table. Users check the box for relevant entries and add a note describing the benefit.
+              </p>
             </div>
           )}
 

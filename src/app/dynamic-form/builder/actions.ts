@@ -22,6 +22,31 @@ const DEFAULT_REPEATABLE_CONFIG: Prisma.InputJsonValue = {
   minRows: 0,
 }
 
+const DEFAULT_DATA_TABLE_SELECTOR_CONFIG: Prisma.InputJsonValue = {
+  mode: 'predefined',
+  rowLabel: 'Stakeholder',
+  columns: [
+    {
+      key: 'include',
+      label: 'Include?',
+      type: 'checkbox',
+    },
+    {
+      key: 'benefit',
+      label: 'How do they benefit?',
+      type: 'textarea',
+      requiredWhenSelected: true,
+    },
+  ],
+  rows: [
+    { id: 'patients', label: 'Patients' },
+    { id: 'caregivers', label: 'Caregivers' },
+    { id: 'clinicians', label: 'Clinicians' },
+  ],
+  selectorColumnKey: 'include',
+  requireOnSelect: ['benefit'],
+}
+
 const createTemplateSchema = z.object({
   name: z.string().min(1),
   description: z.string().max(1000).optional(),
@@ -44,10 +69,20 @@ const repeatableColumnSchema = z.object({
   key: z
     .string()
     .min(1, 'Column key is required')
-    .regex(/^[a-z0-9_]+$/, 'Use lowercase letters, numbers, or underscores'),
+    .regex(/^[a-z0-9_]+$/, 'Use lowercase letters, numbers, underscores'),
   label: z.string().min(1, 'Column label is required'),
-  type: z.enum(['text', 'textarea', 'number']),
+  type: z.enum(['text', 'textarea', 'number', 'checkbox']),
   required: z.boolean().optional(),
+  requiredWhenSelected: z.boolean().optional(),
+})
+
+const repeatableRowSchema = z.object({
+  id: z
+    .string()
+    .min(1, 'Row key is required')
+    .regex(/^[a-z0-9_-]+$/, 'Use lowercase letters, numbers, hyphen, underscore'),
+  label: z.string().min(1, 'Row label is required'),
+  description: z.string().max(500).optional(),
 })
 
 const repeatableConfigSchema = z
@@ -68,6 +103,11 @@ const repeatableConfigSchema = z
       .min(1)
       .max(MAX_REPEATABLE_ROWS)
       .optional(),
+    mode: z.enum(['user', 'predefined']).optional(),
+    rowLabel: z.string().max(150).optional(),
+    rows: z.array(repeatableRowSchema).max(25).optional(),
+    selectorColumnKey: z.string().regex(/^[a-z0-9_]+$/).optional(),
+    requireOnSelect: z.array(z.string()).optional(),
   })
   .refine(
     (value) => {
@@ -84,6 +124,37 @@ const repeatableConfigSchema = z
       path: ['maxRows'],
     }
   )
+  .superRefine((value, ctx) => {
+    if (value.mode === 'predefined') {
+      if (!value.rows || value.rows.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Add at least one row for predefined tables',
+          path: ['rows'],
+        })
+      }
+
+      const checkboxColumns = value.columns.filter((column) => column.type === 'checkbox')
+      if (checkboxColumns.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Predefined tables require a checkbox column',
+          path: ['columns'],
+        })
+      }
+
+      if (value.selectorColumnKey) {
+        const hasSelector = value.columns.some((column) => column.key === value.selectorColumnKey)
+        if (!hasSelector) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Selector column key must match an existing column key',
+            path: ['selectorColumnKey'],
+          })
+        }
+      }
+    }
+  })
 
 const fieldUpdateSchema = z.object({
   label: z.string().min(1, 'Label is required'),
@@ -359,6 +430,13 @@ export async function createField(sectionId: string, input: FieldInput): Promise
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ')
 
+    const repeatableConfig =
+      input.type === FieldType.REPEATABLE_GROUP
+        ? DEFAULT_REPEATABLE_CONFIG
+        : input.type === FieldType.DATA_TABLE_SELECTOR
+          ? DEFAULT_DATA_TABLE_SELECTOR_CONFIG
+          : undefined
+
     await prisma.formQuestion.create({
       data: {
         sectionId: parsedSectionId,
@@ -367,7 +445,7 @@ export async function createField(sectionId: string, input: FieldInput): Promise
         fieldCode: uniqueCode,
         order: nextOrder,
         isRequired: false,
-        repeatableConfig: input.type === FieldType.REPEATABLE_GROUP ? DEFAULT_REPEATABLE_CONFIG : undefined,
+        repeatableConfig,
       },
     })
 
@@ -419,10 +497,15 @@ export async function updateField(fieldId: string, input: FieldUpdateInput): Pro
         isRequired: parsedInput.isRequired ?? false,
       }
 
-      if (question.type === FieldType.REPEATABLE_GROUP) {
+      if (question.type === FieldType.REPEATABLE_GROUP || question.type === FieldType.DATA_TABLE_SELECTOR) {
         const existingConfig = question.repeatableConfig as Prisma.InputJsonValue | null
-        const config = parsedInput.repeatableConfig ?? existingConfig
-        updateData.repeatableConfig = (config ?? DEFAULT_REPEATABLE_CONFIG) as Prisma.InputJsonValue
+        const fallbackConfig =
+          question.type === FieldType.DATA_TABLE_SELECTOR
+            ? DEFAULT_DATA_TABLE_SELECTOR_CONFIG
+            : DEFAULT_REPEATABLE_CONFIG
+
+        const config = parsedInput.repeatableConfig ?? existingConfig ?? fallbackConfig
+        updateData.repeatableConfig = config as Prisma.InputJsonValue
       } else if (parsedInput.repeatableConfig !== undefined) {
         updateData.repeatableConfig = Prisma.JsonNull
       }

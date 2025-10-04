@@ -77,6 +77,8 @@ Use a **Data Table** when you want to capture several related fields per row (co
 4. Click **Add column** to insert more columns (limit of 8); use the trash icon to remove extras (at least one column is required).
 5. Save the field. In the live form, submitters see the configured table and can add rows until the maximum is reached.
 
+> **Need predefined rows with checkboxes?** Choose **Data Table with Selector** instead. You’ll enter the stakeholder list once, and submitters simply check the relevant rows and add benefit notes.
+
 > **Dropdown tip:** When configuring dropdowns, the second column shows the database value (auto-slugged with underscores). These stay read-only so labels can change without breaking stored data.
 
 > **Design Tip:** Keep sections short. If a section has more than 6–7 questions, consider splitting it into two.

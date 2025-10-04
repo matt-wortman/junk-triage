@@ -1,4 +1,4 @@
-import { ConditionalConfig, ConditionalRule, RepeatableFieldConfig, RepeatableGroupConfig } from './types';
+import { ConditionalConfig, ConditionalRule, RepeatableFieldConfig, RepeatableGroupConfig, RepeatablePredefinedRow, RepeatableGroupMode } from './types';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -14,7 +14,7 @@ const allowedOperators: ConditionalRule['operator'][] = [
 ];
 
 const allowedActions: ConditionalRule['action'][] = ['show', 'hide', 'require', 'optional'];
-const allowedColumnTypes: RepeatableFieldConfig['type'][] = ['text', 'textarea', 'number'];
+const allowedColumnTypes: RepeatableFieldConfig['type'][] = ['text', 'textarea', 'number', 'checkbox'];
 
 export function isJsonRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -206,12 +206,14 @@ function parseRepeatableColumn(value: unknown): RepeatableFieldConfig | null {
   }
 
   const required = Boolean(record.required);
+  const requiredWhenSelected = Boolean(record.requiredWhenSelected);
 
   return {
     key: normalizedKey,
     label,
     type: typeValue as RepeatableFieldConfig['type'],
     required,
+    requiredWhenSelected,
   };
 }
 
@@ -256,6 +258,17 @@ export function parseRepeatableGroupConfig(value: unknown): RepeatableGroupConfi
   const minRows = parseOptionalRowCount(record.minRows);
   const maxRows = parseOptionalRowCount(record.maxRows);
 
+  const mode = parseRepeatableMode(record.mode);
+  const rows = parsePredefinedRows(record.rows);
+
+  const selectorColumnKey = typeof record.selectorColumnKey === 'string' ? record.selectorColumnKey : undefined;
+
+  const requireOnSelect = Array.isArray(record.requireOnSelect)
+    ? record.requireOnSelect
+        .map((item) => (typeof item === 'string' ? item : null))
+        .filter((item): item is string => Boolean(item))
+    : undefined;
+
   const result: RepeatableGroupConfig = {
     columns,
   };
@@ -268,5 +281,60 @@ export function parseRepeatableGroupConfig(value: unknown): RepeatableGroupConfi
     result.maxRows = typeof result.minRows === 'number' && maxRows < result.minRows ? result.minRows : maxRows;
   }
 
+  if (mode) {
+    result.mode = mode;
+  }
+
+  if (Array.isArray(rows) && rows.length > 0) {
+    result.rows = rows;
+  }
+
+  if (typeof record.rowLabel === 'string' && record.rowLabel.trim().length > 0) {
+    result.rowLabel = record.rowLabel.trim();
+  }
+
+  if (selectorColumnKey) {
+    result.selectorColumnKey = selectorColumnKey;
+  }
+
+  if (requireOnSelect && requireOnSelect.length > 0) {
+    result.requireOnSelect = requireOnSelect;
+  }
+
   return result;
+}
+
+function parseRepeatableMode(value: unknown): RepeatableGroupMode | undefined {
+  if (value === 'predefined' || value === 'user') {
+    return value;
+  }
+  return undefined;
+}
+
+function parsePredefinedRows(value: unknown): RepeatablePredefinedRow[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const rows: RepeatablePredefinedRow[] = [];
+
+  value.forEach((item, index) => {
+    const record = parseJsonRecord(item);
+    if (!record) {
+      return;
+    }
+
+    const label = typeof record.label === 'string' ? record.label.trim() : '';
+    if (!label) {
+      return;
+    }
+
+    const idRaw = typeof record.id === 'string' ? record.id.trim() : '';
+    const id = idRaw || `row_${index + 1}`;
+    const description = typeof record.description === 'string' ? record.description : undefined;
+
+    rows.push({ id, label, description });
+  });
+
+  return rows.length > 0 ? rows : undefined;
 }

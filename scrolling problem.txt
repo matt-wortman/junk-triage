@@ -1,0 +1,43 @@
+# Fix Dialog Scrolling Issue
+
+## Problem
+The "Configure field" dialog in the form builder cannot scroll when content is taller than the viewport. Users cannot see or access the "Cancel" and "Save field" buttons at the bottom when editing fields with many options (like the 8-option multi-select shown).
+
+## Root Cause
+- `DialogContent` component has no max-height constraint
+- No overflow-y scrolling enabled
+- Content can extend beyond viewport with no way to access bottom buttons
+
+## Solution
+
+### Option 1: Add scrolling to DialogContent (Recommended - Simpler)
+Modify `src/components/ui/dialog.tsx` line 40-42 to add max-height and overflow:
+
+```tsx
+className={cn(
+  "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 max-h-[90vh] overflow-y-auto data-[state=open]:animate-in ...",
+  className
+)}
+```
+
+**Pros**: One-line fix, applies to all dialogs globally
+**Cons**: Entire dialog scrolls including header
+
+### Option 2: Scrollable content area with fixed header/footer (Better UX)
+Restructure `FieldConfigModal.tsx` to have:
+- Fixed header (DialogHeader)
+- Scrollable middle content area
+- Fixed footer with buttons
+
+This requires wrapping the content (lines 588-901) in a scrollable div and moving buttons outside.
+
+**Pros**: Better UX - header stays visible while scrolling
+**Cons**: More code changes, needs testing
+
+## Recommendation
+**Start with Option 1** - it's a quick global fix that will immediately solve the problem for all dialogs. If you want better UX later, we can implement Option 2 for specific dialogs.
+
+## Files to Change
+1. `src/components/ui/dialog.tsx` - Add `max-h-[90vh] overflow-y-auto` to DialogContent className (line 41)
+
+That's it! One line change to fix the scrolling issue.

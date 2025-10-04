@@ -60,6 +60,7 @@
   - Added `repeatableConfig` JSON column to `FormQuestion` (Prisma migration `20251003152155_add_repeatable_config`)
   - Builder UI now exposes Data Table column editor (labels, auto-generated keys, input types, required flag)
   - Authors can set min/max row limits; renderer enforces constraints at runtime
+  - Introduced **Data Table with Selector** field type (predefined stakeholder rows with checkbox + notes column)
   - Dropdown options show labeled database keys, auto-slug with underscores, and enforce shared max counts
   - Added `npm run dev:logs` / `npm run prisma:dev:logs` scripts that tee console output into `logs/`
 

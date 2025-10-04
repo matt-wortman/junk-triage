@@ -2,10 +2,11 @@
 
 A sophisticated web application that digitalizes the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage evaluation process. Built with a modern, database-driven architecture supporting both hardcoded and dynamic form implementations.
 
-## 📌 Status Snapshot (2025-10-03)
-- Full deployment notes: `docs/release-notes/2025-10-02.md`
-- Latest container: `innovationventures.azurecr.io/tech-triage-platform:prod@sha256:31bcaa541b70261694fe806ff8cd8a4490743adbe9ebcbf4f40dc3a5eef99ff7`
-- Azure Web App `tech-triage-app` restarted 2025-10-02; `/api/health` confirms database connectivity
+## 📌 Status Snapshot (2025-10-04)
+- Release notes: `docs/release-notes/2025-10-02.md`
+- Latest container: `innovationventures.azurecr.io/tech-triage-platform:prod@sha256:63c43a9dfdadba3b277ff93299e3395532d3a156e9f40f03dd45de0bf87ff53b`
+- Azure Web App `tech-triage-app` restarted 2025-10-04 after incremental update; `/api/health` confirms database connectivity
+- Azure deployment runbooks now capture both incremental pushes and full reprovisioning (see “☁️ Azure Deployment Overview”)
 - Dynamic form exports **print-ready PDFs** (report layout + scoring graphics) via `/api/form-exports`
 - Builder now supports **Data Table configuration** (column definitions + min/max row limits stored in Prisma `repeatableConfig`)
 - Dropdown option slugs normalize with underscores and show labeled, read-only database keys
@@ -43,6 +44,33 @@ npm run prisma:dev:logs  # Writes logs/prisma-dev-YYYYMMDD-HHMMSS.log
 - **Web App**: http://localhost:3000
 - **Database**: Running on ports 51213-51215
 - **Prisma Studio** (optional): `npx prisma studio`
+
+## ☁️ Azure Deployment Overview
+
+We support two deployment paths. Use the lightweight incremental push for routine releases; fall back to the full provisioning script when infrastructure elements need to be (re)created.
+
+1. **Incremental update (recommended day-to-day)**
+   - Build and push the image from repo root:
+     ```bash
+     az acr build --registry innovationventures --image tech-triage-platform:prod .
+     ```
+   - Restart the container so the Web App pulls the new digest:
+     ```bash
+     az webapp restart -g rg-eastus-hydroxyureadosing -n tech-triage-app
+     ```
+   - Verify `/api/health` returns `{"status":"healthy","database":"connected"}`.
+   - Reference: `docs/runbooks/deployment-runbook-2025-10-03.md` (updated with incremental steps and troubleshooting tips).
+
+2. **Full provisioning / configuration refresh**
+   - Export required secrets (`POSTGRES_ADMIN`, `POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`, etc.) in your shell **before** running the script if Key Vault reads are blocked.
+   - Execute the automation script:
+     ```bash
+     ./scripts/deploy-to-azure.sh
+     ```
+   - Script ensures resource group, Postgres Flexible Server, App Service plan, Web App settings, and container image configuration are up to date.
+   - Reference: `AZURE_HANDOVER.md` (Section “Deployment Workflow”) for detailed explanations of each step.
+
+> **Tip:** In production environments avoid demoting the last active form template. If the dynamic form shows “Failed to load form template,” confirm at least one template has `isActive = true` in the Azure database.
 
 ### 2. Quality Checks
 
@@ -140,6 +168,7 @@ If the export should include additional branding (logos, headers) drop assets in
 - [x] **Report layout polish** – numbered question/response list, scoring matrix, impact vs value quadrant, automatic page break handling
 - [x] **Builder build optimization** – `/dynamic-form/builder` renders dynamically at runtime so container builds succeed without DATABASE_URL
 - [x] **Data Table configurator** – authors define table columns, input types, required flags, and row limits directly in the builder (stored in Prisma `repeatableConfig`)
+- [x] **Data Table with Selector** – new field type with predefined stakeholder rows, include checkbox, and conditional notes column
 - [x] **Dropdown UX improvements** – labeled database keys, underscore slug normalization, and enforced option limits using shared constants
 - [x] **Server log capture** – `npm run dev:logs` / `npm run prisma:dev:logs` mirror terminal output into `logs/` for offline review
 - [ ] **Integration tests** – Need Playwright coverage for export flows, data table editing, and regression checks

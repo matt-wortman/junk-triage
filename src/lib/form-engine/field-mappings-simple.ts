@@ -13,6 +13,7 @@ export const fieldTypeComponentMap = {
   [FieldType.CHECKBOX_GROUP]: 'CheckboxGroup',
   [FieldType.DATE]: 'DateInput',
   [FieldType.REPEATABLE_GROUP]: 'RepeatableGroup',
+  [FieldType.DATA_TABLE_SELECTOR]: 'DataTableSelector',
   [FieldType.SCORING_0_3]: 'ScoringComponent',
   [FieldType.SCORING_MATRIX]: 'ScoringMatrixComponent',
 };
@@ -31,7 +32,8 @@ export function isMultiValueField(fieldType: FieldType): boolean {
   const multiValueTypes: FieldType[] = [
     FieldType.MULTI_SELECT,
     FieldType.CHECKBOX_GROUP,
-    FieldType.REPEATABLE_GROUP
+    FieldType.REPEATABLE_GROUP,
+    FieldType.DATA_TABLE_SELECTOR,
   ];
   return multiValueTypes.includes(fieldType);
 }
@@ -66,6 +68,7 @@ export function getDefaultValue(fieldType: FieldType): string | number | string[
     case FieldType.MULTI_SELECT:
     case FieldType.CHECKBOX_GROUP:
     case FieldType.REPEATABLE_GROUP:
+    case FieldType.DATA_TABLE_SELECTOR:
       return [];
 
     case FieldType.SINGLE_SELECT:
@@ -95,6 +98,7 @@ export function validateFieldType(fieldType: FieldType, value: string | number |
     case FieldType.MULTI_SELECT:
     case FieldType.CHECKBOX_GROUP:
     case FieldType.REPEATABLE_GROUP:
+    case FieldType.DATA_TABLE_SELECTOR:
       return Array.isArray(value);
 
     default:

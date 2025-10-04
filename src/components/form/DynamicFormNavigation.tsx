@@ -106,66 +106,88 @@ export function DynamicFormNavigation({
     }
   };
 
+  const skipSectionValidation =
+    process.env.NODE_ENV === 'development' ||
+    process.env.NEXT_PUBLIC_ALLOW_SECTION_SKIP === 'true';
+
   const handleNext = () => {
-    if (!isLastSection) {
-      // ✅ VALIDATE current section before advancing
-      const validationResult = validateCurrentSection();
-      if (validationResult.hasErrors) {
-        // ✅ SET validation errors in form state to display to user
-        validationResult.errors.forEach(error => {
-          setError(error.fieldCode, error.message);
-        });
+    if (isLastSection) {
+      return;
+    }
+
+    const validationResult = validateCurrentSection();
+
+    if (validationResult.hasErrors) {
+      validationResult.errors.forEach((error) => {
+        setError(error.fieldCode, error.message);
+      });
+
+      if (!skipSectionValidation) {
         console.log('❌ Validation failed, blocking navigation:', validationResult.errors);
         return;
       }
-      nextSection(); // ✅ ONLY advance if validation passes
+
+      console.log('⚠️  Validation failed, but advancing due to relaxed section rules');
     }
+
+    nextSection();
   };
 
   // ✅ ADD validation function for current section
+  const validateSections = (sectionsToValidate: typeof template.sections) => {
+    const errors: { fieldCode: string; message: string }[] = [];
+
+    sectionsToValidate.forEach((section) => {
+      const questions = [...section.questions].sort((a, b) => a.order - b.order);
+
+      for (const question of questions) {
+        const conditionalConfig = parseConditionalConfig(question.conditional);
+        const isVisible = shouldShowField(conditionalConfig, responses);
+
+        if (!isVisible) continue;
+
+        const isRequired = shouldRequireField(conditionalConfig, question.isRequired, responses);
+        const value = responses[question.fieldCode];
+
+        if (isRequired && (value === undefined || value === null || value === '' || value === false || (Array.isArray(value) && value.length === 0))) {
+          let errorMessage = `${question.label} is required`;
+
+          if (question.validation) {
+            const validationMetadata = parseValidationMetadata(question.validation);
+            const rules = Array.isArray(validationMetadata?.rules)
+              ? (validationMetadata?.rules as ValidationRule[])
+              : [];
+
+            const requiredRule = rules.find((rule) => rule.type === 'required');
+            if (requiredRule?.message) {
+              errorMessage = requiredRule.message;
+            }
+          }
+
+          errors.push({ fieldCode: question.fieldCode, message: errorMessage });
+        }
+      }
+    });
+
+    return { hasErrors: errors.length > 0, errors };
+  };
+
   const validateCurrentSection = () => {
     if (!template) return { hasErrors: false, errors: [] };
 
-    const currentSectionData = template.sections
-      .sort((a, b) => a.order - b.order)[currentSection];
+    const sortedSections = [...template.sections].sort((a, b) => a.order - b.order);
+    const currentSectionData = sortedSections[currentSection];
 
     if (!currentSectionData) return { hasErrors: false, errors: [] };
 
-    const errors: { fieldCode: string; message: string }[] = [];
+    return validateSections([currentSectionData]);
+  };
 
-    // Check each question in current section
-    for (const question of currentSectionData.questions) {
-      // Skip if question is not visible based on conditional logic
-      const conditionalConfig = parseConditionalConfig(question.conditional);
-      const isVisible = shouldShowField(conditionalConfig, responses);
+  const validateAllSections = () => {
+    if (!template) return { hasErrors: false, errors: [] };
 
-      if (!isVisible) continue;
-
-      // Check if required field is empty
-      const isRequired = shouldRequireField(conditionalConfig, question.isRequired, responses);
-      const value = responses[question.fieldCode];
-
-      if (isRequired && (!value || value === '' || value === null || value === undefined)) {
-        // ✅ Extract error message from validation rules if available
-        let errorMessage = `${question.label} is required`;
-
-        if (question.validation) {
-          const validationMetadata = parseValidationMetadata(question.validation);
-          const rules = Array.isArray(validationMetadata?.rules)
-            ? (validationMetadata?.rules as ValidationRule[])
-            : [];
-
-          const requiredRule = rules.find((rule) => rule.type === 'required');
-          if (requiredRule?.message) {
-            errorMessage = requiredRule.message;
-          }
-        }
-
-        errors.push({ fieldCode: question.fieldCode, message: errorMessage });
-      }
-    }
-
-    return { hasErrors: errors.length > 0, errors };
+    const sortedSections = [...template.sections].sort((a, b) => a.order - b.order);
+    return validateSections(sortedSections);
   };
 
   const handlePrevious = () => {
@@ -195,6 +217,16 @@ export function DynamicFormNavigation({
       repeatGroups,
       calculatedScores: null // TODO: Implement scoring calculation
     };
+
+    const validationResult = validateAllSections();
+
+    if (validationResult.hasErrors) {
+      validationResult.errors.forEach((error) => {
+        setError(error.fieldCode, error.message);
+      });
+      toast.error('Please fill in all required fields before submitting.');
+      return;
+    }
 
     if (onSubmit) {
       console.log('📝 Submitting form with data:', formData);

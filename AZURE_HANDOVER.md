@@ -6,7 +6,7 @@ This document gives senior engineers everything needed to operate and extend the
 - **Application**: Next.js 15 (App Router) running in a container. Prisma ORM talks to PostgreSQL.
 - **Entry script**: `/usr/src/app/start.sh` runs Prisma migrations, optional seed, then launches `node server.js`.
 - **Database**: Azure Database for PostgreSQL Flexible Server (v17). Prisma migrations manage schema.
-- **Image pipeline**: Source lives in this repo. Images are built with `az acr build` into the Innovation Ventures ACR and pulled by the App Service. Latest tag (`prod`) digest: `sha256:31bcaa541b70261694fe806ff8cd8a4490743adbe9ebcbf4f40dc3a5eef99ff7` (published 2025-10-02).
+- **Image pipeline**: Source lives in this repo. Images are built with `az acr build` into the Innovation Ventures ACR and pulled by the App Service. Latest tag (`prod`) digest: `sha256:63c43a9dfdadba3b277ff93299e3395532d3a156e9f40f03dd45de0bf87ff53b` (published 2025-10-04).
 - **Health checks**: `/api/health` exercises the database connection and is wired into the App Service container health probe.
 
 ## 2. Resource Inventory
@@ -30,14 +30,33 @@ This document gives senior engineers everything needed to operate and extend the
    az acr build --registry innovationventures \
      --image tech-triage-platform:prod .
    ```
-3. Successful runs appear in the Azure portal under ACR > Tasks > Runs and produce a new digest (current prod digest: `sha256:cafdd773cd4604a7a6ce75b739e6cb5a57c63c5200c588b9ffb1c771d4a9dc36`).
+3. Successful runs appear in the Azure portal under ACR > Tasks > Runs and produce a new digest (current prod digest: `sha256:63c43a9dfdadba3b277ff93299e3395532d3a156e9f40f03dd45de0bf87ff53b`).
 
 ## 4. Deployment Workflow
-Use `scripts/deploy-to-azure.sh` for provisioning or updating. The script is idempotent: it creates resources if missing and refreshes configuration if they already exist.
+Two supported flows:
+
+### 4.1 Incremental image update (routine release)
+1. From repo root, build and push to Azure Container Registry:
+   ```bash
+   az acr build --registry innovationventures --image tech-triage-platform:prod .
+   ```
+2. Restart the Web App so it pulls the new digest:
+   ```bash
+   az webapp restart -g rg-eastus-hydroxyureadosing -n tech-triage-app
+   ```
+3. Verify the deployment:
+   ```bash
+   curl -s https://tech-triage-app.azurewebsites.net/api/health
+   ```
+   Expected response: `{ "status": "healthy", "database": "connected" }`.
+4. Log the run in `docs/runbooks/deployment-runbook-2025-10-03.md` (updated with incremental steps, timestamps, and troubleshooting notes).
+
+### 4.2 Full provisioning / configuration refresh
+Use `scripts/deploy-to-azure.sh` when infrastructure (Postgres, App Service plan, settings) needs to be created or re-synced.
 
 > **Important:** Key Vault RBAC is not wired up for CI yet. If the script cannot read secrets (`ForbiddenByRbac`), export `POSTGRES_ADMIN`, `POSTGRES_PASSWORD`, and `NEXTAUTH_SECRET` in your shell before running the script. The script will honor pre-set env vars.
 
-### Required inputs
+#### Required inputs
 Provide secrets via environment variables (current strategy) or via Key Vault once RBAC issues are resolved.
 ```bash
 export RESOURCE_GROUP="rg-eastus-hydroxyureadosing"
@@ -53,7 +72,7 @@ export NEXTAUTH_SECRET="<32+ char random>"
 ./scripts/deploy-to-azure.sh
 ```
 
-### What the script does
+#### What the script does
 1. Ensures the resource group exists.
 2. Creates (or updates) the PostgreSQL flexible server using the low-cost B1ms SKU.
 3. Ensures `triage_db` database exists and that the admin password matches the provided value.
@@ -62,6 +81,7 @@ export NEXTAUTH_SECRET="<32+ char random>"
 6. Creates/updates the Web App and points it to `innovationventures.azurecr.io/tech-triage-platform:prod`.
 7. Sets required app settings.
 8. Configures the container health probe.
+9. Restarts the Web App so the new configuration is live.
 
 ## 5. Application Settings & Secrets
 Current App Service settings (`az webapp config appsettings list ...`):
