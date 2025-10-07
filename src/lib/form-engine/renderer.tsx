@@ -19,6 +19,7 @@ import { validateField } from '../validation/form-schemas';
 import { extractScoringInputs, calculateAllScores } from '../scoring/calculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { logger } from '@/lib/logger';
 import { isInfoBoxMetadata, parseValidationMetadata } from './json-utils';
 
 // Form state reducer
@@ -172,7 +173,7 @@ function FormEngineProvider({
         const calculatedScores = calculateAllScores(scoringInputs);
         dispatch({ type: 'SET_CALCULATED_SCORES', payload: calculatedScores });
       } catch (error) {
-        console.warn('Error calculating scores:', error);
+        logger.warn('Error calculating scores', error);
       }
     }
   }, [state.responses]);
@@ -218,7 +219,7 @@ function FormEngineProvider({
         calculatedScores: state.calculatedScores
       });
     } catch (error) {
-      console.error('Form submission error:', error);
+      logger.error('Form submission error', error);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -235,7 +236,7 @@ function FormEngineProvider({
         calculatedScores: state.calculatedScores
       });
     } catch (error) {
-      console.error('Draft save error:', error);
+      logger.error('Draft save error', error);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -247,6 +248,7 @@ function FormEngineProvider({
     repeatGroups: state.repeatGroups,
     currentSection: state.currentSection,
     isLoading: state.isLoading,
+    calculatedScores: state.calculatedScores,
     errors: state.errors,
     setResponse,
     setRepeatGroupData,
@@ -316,7 +318,7 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
 
   // Debug logging for Key Alignment Areas
   if (question.fieldCode === 'F2.1.info') {
-    console.log('KEY ALIGNMENT DEBUG:', {
+    logger.info('Key alignment debug', {
       fieldCode: question.fieldCode,
       label: question.label,
       validation: question.validation,
@@ -378,16 +380,16 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
   }
 
   return (
-    <Card className={className}>
+    <Card className={`bg-white border-0 [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)] rounded-2xl ${className}`}>
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor={question.fieldCode}>
+            <Label htmlFor={question.fieldCode} className="text-base font-medium text-[#353535]">
               {question.label}
               {isRequired && <span className="text-red-500 ml-1">*</span>}
             </Label>
             {question.helpText && (
-              <p className="text-sm text-muted-foreground">{question.helpText}</p>
+              <p className="text-sm text-[#6b7280]">{question.helpText}</p>
             )}
           </div>
 
@@ -432,11 +434,11 @@ interface DynamicSectionProps {
 
 function DynamicSection({ section, className = '' }: DynamicSectionProps) {
   return (
-    <Card className={className}>
+    <Card className={`bg-[#e0e5ec] rounded-3xl shadow-none border-0 ${className}`}>
       <CardHeader>
-        <CardTitle className="text-xl">{section.title}</CardTitle>
+        <CardTitle className="text-2xl text-[#353535]">{section.title}</CardTitle>
         {section.description && (
-          <p className="text-sm text-muted-foreground">{section.description}</p>
+          <p className="text-sm text-[#6b7280]">{section.description}</p>
         )}
       </CardHeader>
       <CardContent>

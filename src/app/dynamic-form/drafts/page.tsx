@@ -5,10 +5,11 @@ import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, FileText, Clock, CheckCircle } from 'lucide-react';
+import { Trash2, Edit, FileText, Clock, CheckCircle, Home, Hammer, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { getUserDrafts, deleteDraftResponse } from '../actions';
+import { getOrCreateSessionId, getClientLogger } from '@/lib/session';
 import { toast } from 'sonner';
 
 interface DraftSummary {
@@ -17,6 +18,7 @@ interface DraftSummary {
   templateVersion: string;
   createdAt: Date;
   updatedAt: Date;
+  submittedBy?: string | null;
 }
 
 function DraftsContent() {
@@ -31,28 +33,28 @@ function DraftsContent() {
   useEffect(() => {
     loadDrafts();
 
-    // Show success message if redirected from successful submission
     if (justSubmitted) {
       toast.success('Form submitted successfully!');
-      // Hide banner after 5 seconds
       setTimeout(() => setShowSuccessBanner(false), 5000);
     }
   }, [justSubmitted]);
 
   const loadDrafts = async () => {
     try {
-      const result = await getUserDrafts();
+      const result = await getUserDrafts(getOrCreateSessionId(), 'all');
       if (result.success && result.drafts) {
-        setDrafts(result.drafts.map(draft => ({
-          ...draft,
-          createdAt: new Date(draft.createdAt),
-          updatedAt: new Date(draft.updatedAt),
-        })));
+        setDrafts(
+          result.drafts.map((draft) => ({
+            ...draft,
+            createdAt: new Date(draft.createdAt),
+            updatedAt: new Date(draft.updatedAt),
+          }))
+        );
       } else {
         toast.error(result.error || 'Failed to load drafts');
       }
     } catch (error) {
-      console.error('Error loading drafts:', error);
+      getClientLogger().error('Error loading drafts', error);
       toast.error('An error occurred while loading drafts');
     } finally {
       setLoading(false);
@@ -66,65 +68,99 @@ function DraftsContent() {
 
     setDeletingDraft(draftId);
     try {
-      const result = await deleteDraftResponse(draftId);
+      const result = await deleteDraftResponse(draftId, getOrCreateSessionId());
       if (result.success) {
         toast.success('Draft deleted successfully');
-        // Remove the draft from the local state
-        setDrafts(prev => prev.filter(draft => draft.id !== draftId));
+        setDrafts((prev) => prev.filter((draft) => draft.id !== draftId));
       } else {
         toast.error(result.error || 'Failed to delete draft');
       }
     } catch (error) {
-      console.error('Error deleting draft:', error);
+      getClientLogger().error('Error deleting draft', error);
       toast.error('An error occurred while deleting the draft');
     } finally {
       setDeletingDraft(null);
     }
   };
 
+  const navButtonClass = 'h-10 px-5 rounded-full text-[15px] font-medium gap-2';
+
+  const containerCardClass = 'bg-[#e0e5ec] border-0 shadow-none rounded-3xl';
+  const innerCardClass =
+    'bg-white border-0 rounded-3xl [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)]';
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-[#e0e5ec] flex items-center justify-center">
+        <div className="text-center text-[#353535]">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-lg text-gray-600">Loading your drafts...</p>
+          <p className="mt-4 text-lg text-[#6b7280]">Loading your drafts...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Drafts</h1>
-              <p className="text-gray-600 mt-2">
-                Continue working on your saved form drafts
-              </p>
-            </div>
-            <Link href="/dynamic-form">
-              <Button>
-                <FileText className="mr-2 h-4 w-4" />
-                Start New Form
+    <div className="min-h-screen bg-[#e0e5ec]">
+      <nav className="bg-[#e0e5ec] border-0 shadow-none">
+        <div className="container mx-auto px-4 py-4 max-w-5xl">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild className={navButtonClass}>
+                <Link href="/">
+                  <Home className="h-4 w-4" />
+                  Home
+                </Link>
               </Button>
-            </Link>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form">
+                  <FileText className="h-4 w-4" />
+                  Dynamic Form
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/builder">
+                  <Hammer className="h-4 w-4" />
+                  Builder
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/drafts">
+                  <FileText className="h-4 w-4" />
+                  Drafts
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/submissions">
+                  <ClipboardList className="h-4 w-4" />
+                  Submissions
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
+      </nav>
 
-        {/* Success Banner */}
+      <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
+        <Card className={containerCardClass}>
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-3xl font-bold text-[#353535]">Draft Workspace</h1>
+              <p className="text-[#6b7280]">
+                Continue working on saved evaluations or start a new one at any time.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {showSuccessBanner && (
-          <Card className="mb-6 border-green-200 bg-green-50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-900">
-                    Form submitted successfully!
-                  </p>
-                  <p className="text-sm text-green-700">
+          <Card className={`${containerCardClass} border border-green-200/40 bg-green-50/90`}>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3 text-[#14532d]">
+                <CheckCircle className="h-5 w-5" />
+                <div className="flex-1">
+                  <p className="font-semibold">Form submitted successfully!</p>
+                  <p className="text-sm opacity-90">
                     Your technology triage form has been submitted and is now under review.
                   </p>
                 </div>
@@ -132,7 +168,7 @@ function DraftsContent() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowSuccessBanner(false)}
-                  className="ml-auto text-green-600 hover:text-green-700"
+                  className="text-[#14532d] hover:bg-green-100"
                 >
                   ✕
                 </Button>
@@ -141,36 +177,39 @@ function DraftsContent() {
           </Card>
         )}
 
-        {/* Drafts List */}
         {drafts.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No drafts found
-              </h3>
-              <p className="text-gray-600 mb-6">
+          <Card className={`${innerCardClass} text-center`}>
+            <CardContent className="p-12 space-y-4">
+              <FileText className="h-16 w-16 text-[#94a3b8] mx-auto" />
+              <h3 className="text-xl font-semibold text-[#353535]">No drafts found</h3>
+              <p className="text-[#6b7280]">
                 You haven&apos;t saved any form drafts yet. Start a new form to begin.
               </p>
-              <Link href="/dynamic-form">
-                <Button>Start New Form</Button>
-              </Link>
+              <Button asChild className="shadow-sm">
+                <Link href="/dynamic-form">Start New Form</Link>
+              </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
             {drafts.map((draft) => (
-              <Card key={draft.id} className="hover:shadow-md transition-shadow">
+              <Card key={draft.id} className={`${innerCardClass} transition-transform hover:-translate-y-1`}>
                 <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <CardTitle className="text-lg font-semibold">
+                      <CardTitle className="text-lg font-semibold text-[#353535]">
                         {draft.templateName}
                       </CardTitle>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                      <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-[#6b7280]">
                         <Badge variant="outline" className="text-xs">
                           v{draft.templateVersion}
                         </Badge>
+                        {draft.submittedBy && (
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium text-[#353535]">By</span>
+                            <span>{draft.submittedBy}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           Created {format(draft.createdAt, 'MMM d, yyyy')}
@@ -181,24 +220,30 @@ function DraftsContent() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Link href={`/dynamic-form?draft=${draft.id}`}>
-                        <Button variant="outline" size="sm">
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="outline" size="sm" className="shadow-sm">
+                        <Link href={`/dynamic-form?draft=${draft.id}`}>
                           <Edit className="mr-2 h-4 w-4" />
-                          Continue Editing
-                        </Button>
-                      </Link>
+                          Continue
+                        </Link>
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteDraft(draft.id)}
                         disabled={deletingDraft === draft.id}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="shadow-sm text-red-600 hover:text-red-700 hover:bg-red-100/80"
                       >
                         {deletingDraft === draft.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" />
+                          <span className="flex items-center gap-2">
+                            <div className="h-3 w-3 animate-spin rounded-full border-b-2 border-red-600" />
+                            Deleting...
+                          </span>
                         ) : (
-                          <Trash2 className="h-4 w-4" />
+                          <span className="flex items-center gap-2">
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </span>
                         )}
                       </Button>
                     </div>
@@ -208,24 +253,6 @@ function DraftsContent() {
             ))}
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <Link href="/" className="text-primary hover:underline">
-            ← Back to Home
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LoadingFallback() {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading drafts...</p>
       </div>
     </div>
   );
@@ -233,7 +260,7 @@ function LoadingFallback() {
 
 export default function DraftsPage() {
   return (
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#e0e5ec]" />}> 
       <DraftsContent />
     </Suspense>
   );

@@ -109,6 +109,7 @@ export interface FormContext {
   repeatGroups: RepeatableGroupData;
   currentSection: number;
   isLoading: boolean;
+  calculatedScores: CalculatedScores | null;
   errors: { [fieldCode: string]: string };
   setResponse: (fieldCode: string, value: string | number | boolean | string[] | Record<string, unknown>) => void;
   setRepeatGroupData: (fieldCode: string, data: Record<string, unknown>[]) => void;

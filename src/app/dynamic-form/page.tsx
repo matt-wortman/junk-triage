@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Hammer, Home } from 'lucide-react';
+import { FileText, Hammer, Home, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { FormEngineProvider, DynamicFormRenderer } from '@/lib/form-engine/renderer';
 import { DynamicFormNavigation } from '@/components/form/DynamicFormNavigation';
@@ -16,6 +16,7 @@ import {
   CalculatedScores,
 } from '@/lib/form-engine/types';
 import { submitFormResponse, saveDraftResponse, loadDraftResponse } from './actions';
+import { getOrCreateSessionId, getClientLogger } from '@/lib/session';
 import { toast } from 'sonner';
 
 function DynamicFormContent() {
@@ -49,11 +50,12 @@ const [initialFormData, setInitialFormData] = useState<{
 
         // If we have a draft ID, load the draft data
         if (draftId) {
-          console.log('🔍 Loading draft:', draftId);
-          const draftResult = await loadDraftResponse(draftId);
+          const logger = getClientLogger();
+          logger.info('Loading draft', draftId);
+          const draftResult = await loadDraftResponse(draftId, getOrCreateSessionId());
 
           if (draftResult.success && draftResult.data) {
-            console.log('✅ Draft loaded successfully:', draftResult.data);
+            logger.info('Draft loaded successfully');
             setInitialFormData({
               responses: draftResult.data.responses,
               repeatGroups: draftResult.data.repeatGroups,
@@ -63,7 +65,7 @@ const [initialFormData, setInitialFormData] = useState<{
             setIsDraftLoaded(true);
             toast.success('Draft loaded successfully!');
           } else {
-            console.error('❌ Failed to load draft:', draftResult.error);
+            logger.error('Failed to load draft', draftResult.error);
             toast.error(draftResult.error || 'Failed to load draft');
             // Remove the draft parameter from URL if loading failed
             router.replace('/dynamic-form');
@@ -84,7 +86,8 @@ const [initialFormData, setInitialFormData] = useState<{
     repeatGroups: RepeatableGroupData;
     calculatedScores: CalculatedScores | null;
   }) => {
-    console.log('Form submitted:', data);
+    const logger = getClientLogger();
+    logger.info('Submitting form');
 
     if (isSubmitting) return; // Prevent double submission
 
@@ -100,15 +103,19 @@ const [initialFormData, setInitialFormData] = useState<{
         ? { ...data.calculatedScores }
         : {};
 
-      const result = await submitFormResponse({
-        templateId: template.id,
-        responses: data.responses as Record<string, unknown>,
-        repeatGroups: data.repeatGroups as Record<string, unknown>,
-        calculatedScores: normalizedScores,
-      });
+      const result = await submitFormResponse(
+        {
+          templateId: template.id,
+          responses: data.responses as Record<string, unknown>,
+          repeatGroups: data.repeatGroups as Record<string, unknown>,
+          calculatedScores: normalizedScores,
+        },
+        getOrCreateSessionId(),
+        currentDraftId || undefined
+      );
 
       if (result.success) {
-        console.log('✅ Form submitted successfully:', result.submissionId);
+        logger.info('Form submitted successfully', result.submissionId);
         toast.success('Form submitted successfully!');
 
         // Clear the current draft ID since it's now submitted
@@ -116,16 +123,16 @@ const [initialFormData, setInitialFormData] = useState<{
         setInitialFormData(null);
         setIsDraftLoaded(false);
 
-        // Redirect to drafts page with success message
+        // Redirect to submissions page with success message
         setTimeout(() => {
-          router.push('/dynamic-form/drafts?submitted=true');
+          router.push('/dynamic-form/submissions?submitted=true');
         }, 1500);
       } else {
-        console.error('❌ Form submission failed:', result.error);
+        logger.error('Form submission failed', result.error);
         toast.error(result.error || 'Failed to submit form');
       }
     } catch (error) {
-      console.error('❌ Form submission error:', error);
+      logger.error('Form submission error', error);
       toast.error('An unexpected error occurred while submitting the form');
     } finally {
       setIsSubmitting(false);
@@ -137,7 +144,8 @@ const [initialFormData, setInitialFormData] = useState<{
     repeatGroups: RepeatableGroupData;
     calculatedScores: CalculatedScores | null;
   }) => {
-    console.log('Draft saved:', data);
+    const logger = getClientLogger();
+    logger.info('Saving draft');
 
     if (isSavingDraft) return; // Prevent multiple save operations
 
@@ -160,12 +168,12 @@ const [initialFormData, setInitialFormData] = useState<{
           repeatGroups: data.repeatGroups as Record<string, unknown>,
           calculatedScores: normalizedScores,
         },
-        'anonymous', // TODO: Replace with actual user ID when auth is implemented
+        getOrCreateSessionId(),
         currentDraftId || undefined
       );
 
       if (result.success) {
-        console.log('✅ Draft saved successfully:', result.submissionId);
+        logger.info('Draft saved successfully', result.submissionId);
 
         // Update current draft ID if this was a new draft
         if (!currentDraftId && result.submissionId) {
@@ -176,11 +184,11 @@ const [initialFormData, setInitialFormData] = useState<{
 
         toast.success(currentDraftId ? 'Draft updated successfully!' : 'Draft saved successfully!');
       } else {
-        console.error('❌ Draft save failed:', result.error);
+        logger.error('Draft save failed', result.error);
         toast.error(result.error || 'Failed to save draft');
       }
     } catch (error) {
-      console.error('❌ Draft save error:', error);
+      logger.error('Draft save error', error);
       toast.error('An unexpected error occurred while saving draft');
     } finally {
       setIsSavingDraft(false);
@@ -189,10 +197,10 @@ const [initialFormData, setInitialFormData] = useState<{
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#e0e5ec] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">
+          <p className="mt-4 text-[#6b7280]">
             {draftId ? 'Loading draft...' : 'Loading dynamic form...'}
           </p>
         </div>
@@ -202,13 +210,13 @@ const [initialFormData, setInitialFormData] = useState<{
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#e0e5ec] flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-red-600">Error Loading Form</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <p className="text-[#6b7280] mb-4">{error}</p>
             <Link href="/">
               <Button variant="outline">Go Back</Button>
             </Link>
@@ -220,13 +228,13 @@ const [initialFormData, setInitialFormData] = useState<{
 
   if (!template) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#e0e5ec] flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>No Form Template Found</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600 mb-4">No active form template was found in the database.</p>
+            <p className="text-[#6b7280] mb-4">No active form template was found in the database.</p>
             <Link href="/">
               <Button variant="outline">Go Back</Button>
             </Link>
@@ -236,66 +244,81 @@ const [initialFormData, setInitialFormData] = useState<{
     );
   }
 
+  const navButtonClass = 'h-10 px-5 rounded-full text-[15px] font-medium gap-2';
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="border-b bg-white">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="text-primary font-bold text-xl">✚</div>
-              <span className="font-semibold text-lg">Technology Triage (Dynamic)</span>
+    <div className="min-h-screen bg-[#e0e5ec]">
+      <nav className="bg-[#e0e5ec] border-0 shadow-none">
+        <div className="container mx-auto max-w-4xl px-4 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link href="/" className="flex items-center gap-2 text-[#353535] font-semibold text-xl">
+              <div className="text-primary text-2xl">✚</div>
+              Technology Triage (Dynamic)
             </Link>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-3">
               {currentDraftId && (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
+                <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1 text-sm">
+                  <FileText className="h-4 w-4" />
                   Draft Mode
                 </Badge>
               )}
-              <Link href="/dynamic-form/drafts">
-                <Button variant="outline" size="sm">
-                  <FileText className="mr-2 h-4 w-4" />
-                  My Drafts
-                </Button>
-              </Link>
-              <Link href="/dynamic-form/builder">
-                <Button variant="ghost" size="sm">
-                  <Hammer className="mr-2 h-4 w-4" />
-                  Builder
-                </Button>
-              </Link>
-              <Link href="/">
-                <Button variant="ghost" size="sm">
-                  <Home className="mr-2 h-4 w-4" />
+              <Button asChild className={navButtonClass}>
+                <Link href="/">
+                  <Home className="h-4 w-4" />
                   Home
-                </Button>
-              </Link>
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form">
+                  <FileText className="h-4 w-4" />
+                  Dynamic Form
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/builder">
+                  <Hammer className="h-4 w-4" />
+                  Builder
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/drafts">
+                  <FileText className="h-4 w-4" />
+                  Drafts
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/submissions">
+                  <ClipboardList className="h-4 w-4" />
+                  Submissions
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
       </nav>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{template.name}</h1>
-              <p className="text-gray-600">{template.description}</p>
-              <p className="text-sm text-gray-500">Version: {template.version}</p>
-            </div>
-            {isDraftLoaded && (
-              <div className="text-right">
-                <Badge variant="outline" className="mb-2">
-                  Draft Loaded
-                </Badge>
-                <p className="text-sm text-gray-500">
-                  Continuing previous work
-                </p>
+        <Card className="bg-[#e0e5ec] shadow-none border-0 mb-8">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-[#353535]">{template.name}</h1>
+                <p className="text-[#6b7280]">{template.description}</p>
+                <p className="text-sm text-[#6b7280]">Version: {template.version}</p>
               </div>
-            )}
-          </div>
-        </div>
+              {isDraftLoaded && (
+                <div className="text-right">
+                  <Badge variant="outline" className="mb-2">
+                    Draft Loaded
+                  </Badge>
+                  <p className="text-sm text-[#6b7280]">
+                    Continuing previous work
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <FormEngineProvider
           template={template}
@@ -315,14 +338,14 @@ const [initialFormData, setInitialFormData] = useState<{
                 handleSubmit({
                   responses: formData.responses as FormResponse,
                   repeatGroups: formData.repeatGroups as RepeatableGroupData,
-                  calculatedScores: null,
+                  calculatedScores: formData.calculatedScores as CalculatedScores | null,
                 })
               }
               onSaveDraft={(formData) =>
                 handleSaveDraft({
                   responses: formData.responses as FormResponse,
                   repeatGroups: formData.repeatGroups as RepeatableGroupData,
-                  calculatedScores: null,
+                  calculatedScores: formData.calculatedScores as CalculatedScores | null,
                 })
               }
               isSubmitting={isSubmitting}
@@ -338,10 +361,10 @@ const [initialFormData, setInitialFormData] = useState<{
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-[#e0e5ec] flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading form...</p>
+        <p className="mt-4 text-[#6b7280]">Loading form...</p>
       </div>
     </div>
   );

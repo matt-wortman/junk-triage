@@ -40,7 +40,7 @@ export function PreviewMode({ initialTemplate, searchParams }: PreviewModeProps)
             <CardTitle className="text-xl font-semibold">Preview</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border bg-white p-6 space-y-6">
+            <div className="rounded-3xl border-0 bg-white p-8 space-y-6 [box-shadow:6px_6px_12px_rgba(163,177,198,0.35),-6px_-6px_12px_rgba(255,255,255,0.8)]">
               <FormEngineProvider
                 template={template}
                 onSubmit={async () => {

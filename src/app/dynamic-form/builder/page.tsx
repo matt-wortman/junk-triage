@@ -24,10 +24,29 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Activity, CalendarClock, Copy, FileText, Layers, Plus, Trash2 } from 'lucide-react'
+import {
+  Activity,
+  CalendarClock,
+  ClipboardList,
+  Copy,
+  FileText,
+  Hammer,
+  Home,
+  Layers,
+  Plus,
+  Trash2,
+} from 'lucide-react'
+
+const navButtonClass = 'h-10 px-5 rounded-full text-[15px] font-medium gap-2'
+
+const containerCardClass = 'bg-[#e0e5ec] border-0 shadow-none rounded-3xl'
+const innerCardClass =
+  'bg-white border-0 rounded-3xl [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)]'
 
 type BuilderPageProps = {
-  searchParams?: Record<string, string | string[] | undefined>
+  searchParams?:
+    | Promise<Record<string, string | string[] | undefined>>
+    | Record<string, string | string[] | undefined>
 }
 
 type BannerMessage = {
@@ -103,70 +122,99 @@ export const dynamic = 'force-dynamic'
 
 export default async function BuilderLandingPage({ searchParams }: BuilderPageProps) {
   const templates = await getTemplates()
-  const statusParam = Array.isArray(searchParams?.status)
-    ? searchParams?.status[0]
-    : searchParams?.status
-  const errorParam = Array.isArray(searchParams?.error)
-    ? searchParams?.error[0]
-    : searchParams?.error
+  const resolvedSearchParams = await Promise.resolve(searchParams)
+  const statusParam = Array.isArray(resolvedSearchParams?.status)
+    ? resolvedSearchParams?.status[0]
+    : resolvedSearchParams?.status
+  const errorParam = Array.isArray(resolvedSearchParams?.error)
+    ? resolvedSearchParams?.error[0]
+    : resolvedSearchParams?.error
   const bannerMessage = resolveBanner(statusParam, errorParam)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b bg-white">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-lg text-foreground">
-            <span className="text-primary text-xl">✚</span>
-            <span>Technology Triage Builder</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dynamic-form">View Dynamic Form</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/">Home</Link>
-            </Button>
+    <div className="min-h-screen bg-[#e0e5ec]">
+      <nav className="bg-[#e0e5ec] border-0 shadow-none">
+        <div className="container mx-auto px-4 py-4 max-w-6xl">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button asChild className={navButtonClass}>
+                <Link href="/">
+                  <Home className="h-4 w-4" />
+                  Home
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form">
+                  <FileText className="h-4 w-4" />
+                  Dynamic Form
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/builder">
+                  <Hammer className="h-4 w-4" />
+                  Builder
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/drafts">
+                  <FileText className="h-4 w-4" />
+                  Drafts
+                </Link>
+              </Button>
+              <Button asChild className={navButtonClass}>
+                <Link href="/dynamic-form/submissions">
+                  <ClipboardList className="h-4 w-4" />
+                  Submissions
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto max-w-6xl space-y-8 px-4 py-10">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Form Builder</h1>
-          <p className="text-muted-foreground">
-            Manage templates for the dynamic form system. Create new drafts or maintain existing ones.
-          </p>
-        </header>
+      <main className="container mx-auto max-w-6xl space-y-6 px-4 py-10">
+        <Card className={containerCardClass}>
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-3xl font-bold text-[#353535]">Form Builder</h1>
+              <p className="text-[#6b7280]">
+                Manage templates for the dynamic form system. Create new drafts or maintain existing ones.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {bannerMessage && (
-          <div
-            className={`rounded-md border px-4 py-3 ${
+          <Card
+            className={`${containerCardClass} ${
               bannerMessage.variant === 'success'
-                ? 'border-green-200 bg-green-50 text-green-900'
-                : 'border-red-200 bg-red-50 text-red-900'
+                ? 'border border-green-200/40 bg-green-50/90'
+                : 'border border-red-200/40 bg-red-50/90'
             }`}
           >
-            <h2 className="text-sm font-semibold">{bannerMessage.title}</h2>
-            <p className="text-sm">{bannerMessage.description}</p>
-          </div>
+            <CardContent className="p-5">
+              <h2 className="text-sm font-semibold text-[#1f2937]">{bannerMessage.title}</h2>
+              <p className="text-sm text-[#4b5563]">{bannerMessage.description}</p>
+            </CardContent>
+          </Card>
         )}
 
         <CreateTemplateForm />
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-foreground">Existing Templates</h2>
+            <h2 className="text-xl font-semibold text-[#353535]">Existing Templates</h2>
             <Badge variant="outline">Total: {templates.length}</Badge>
           </div>
 
           {templates.length === 0 ? (
-            <Card>
+            <Card className={`${innerCardClass} text-center`}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="flex items-center gap-2 justify-center text-[#353535]">
+                  <FileText className="h-5 w-5 text-primary" />
                   No templates yet
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-[#6b7280]">
                   Create your first template to start using the dynamic form builder.
                 </CardDescription>
               </CardHeader>
@@ -186,10 +234,10 @@ export default async function BuilderLandingPage({ searchParams }: BuilderPagePr
 
 function CreateTemplateForm() {
   return (
-    <Card className="max-w-3xl">
+    <Card className={`${innerCardClass} max-w-3xl`}>
       <CardHeader>
-        <CardTitle>Create a new template</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-[#353535]">Create a new template</CardTitle>
+        <CardDescription className="text-[#6b7280]">
           Set up a blank template that you can populate with sections and fields.
         </CardDescription>
       </CardHeader>
@@ -214,7 +262,7 @@ function CreateTemplateForm() {
               rows={3}
             />
           </div>
-          <Button type="submit">
+          <Button type="submit" className="shadow-sm">
             <Plus className="h-4 w-4" />
             Create template
           </Button>
@@ -228,15 +276,15 @@ function TemplateCard({ template }: { template: TemplateListItem }) {
   const lastUpdated = formatDistanceToNow(template.updatedAt, { addSuffix: true })
 
   return (
-    <Card>
+    <Card className={`${innerCardClass} transition-transform hover:-translate-y-1`}>
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-xl text-[#353535]">
               <FileText className="h-5 w-5 text-primary" />
               {template.name}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-[#6b7280]">
               {template.description?.trim() || 'No description added yet.'}
             </CardDescription>
           </div>
@@ -245,7 +293,7 @@ function TemplateCard({ template }: { template: TemplateListItem }) {
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm text-muted-foreground">
+      <CardContent className="space-y-2 text-sm text-[#6b7280]">
         <div className="flex flex-wrap gap-4">
           <span className="flex items-center gap-1">
             <Layers className="h-4 w-4" />
@@ -263,12 +311,12 @@ function TemplateCard({ template }: { template: TemplateListItem }) {
         <p>Version {template.version}</p>
       </CardContent>
       <CardFooter className="flex flex-wrap items-center gap-3">
-        <Button asChild size="sm">
+        <Button asChild size="sm" className="shadow-sm">
           <Link href={`/dynamic-form/builder/${template.id}`}>Edit</Link>
         </Button>
         <form action={cloneTemplateAction} className="inline">
           <input type="hidden" name="templateId" value={template.id} />
-          <Button type="submit" variant="outline" size="sm">
+          <Button type="submit" variant="outline" size="sm" className="shadow-sm">
             <Copy className="h-4 w-4" />
             Clone
           </Button>

@@ -38,9 +38,9 @@ export function FieldSelectorModal({ triggerLabel = 'Add field', onSelect, disab
         </DialogHeader>
 
         <Tabs defaultValue={firstCategory ?? ''} className="mt-4">
-          <TabsList className="grid grid-cols-3">
+          <TabsList className="grid grid-cols-3 gap-2 bg-transparent p-0">
             {categories.map(({ category, label }) => (
-              <TabsTrigger key={category} value={category}>
+              <TabsTrigger key={category} value={category} className="w-full">
                 {FIELD_CATEGORY_LABELS[category] ?? label}
               </TabsTrigger>
             ))}
@@ -48,7 +48,7 @@ export function FieldSelectorModal({ triggerLabel = 'Add field', onSelect, disab
 
           {categories.map(({ category, types }) => (
             <TabsContent key={category} value={category} className="mt-4">
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3">
                 {types.map((type) => {
                   const config = FIELD_TYPE_CONFIG[type]
                   return (
@@ -56,7 +56,7 @@ export function FieldSelectorModal({ triggerLabel = 'Add field', onSelect, disab
                       key={type}
                       type="button"
                       className={cn(
-                        'rounded-lg border bg-muted/20 p-4 text-left transition-colors hover:border-primary hover:bg-primary/10'
+                        'rounded-2xl border-0 bg-[#e0e5ec] p-5 text-left transition-all [box-shadow:6px_6px_12px_rgba(163,177,198,0.35),-6px_-6px_12px_rgba(255,255,255,0.8)] hover:[box-shadow:inset_4px_4px_8px_rgba(163,177,198,0.25),inset_-4px_-4px_8px_rgba(255,255,255,0.8)] focus-visible:outline-none focus-visible:ring-0'
                       )}
                       onClick={() => handleSelect(type)}
                     >

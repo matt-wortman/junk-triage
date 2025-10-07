@@ -13,7 +13,9 @@ function decodeBase64(value: string) {
 
 export function middleware(request: NextRequest) {
   if (!username || !password) {
-    return NextResponse.next()
+    return new Response('Authentication configuration missing', {
+      status: 500,
+    })
   }
 
   const authorization = request.headers.get('authorization')

@@ -67,9 +67,9 @@ const config: Config = {
       },
       fontFamily: {
         // Design System Typography
-        sans: ['Inter', 'Poppins', 'ui-sans-serif', 'system-ui'],
-        heading: ['Poppins', 'Inter', 'ui-sans-serif', 'system-ui'],
-        body: ['Open Sans', 'ui-sans-serif', 'system-ui'],
+        sans: ['var(--font-nunito-sans)', 'Nunito Sans', 'ui-sans-serif', 'system-ui'],
+        heading: ['var(--font-nunito-sans)', 'Nunito Sans', 'ui-sans-serif', 'system-ui'],
+        body: ['var(--font-nunito-sans)', 'Nunito Sans', 'ui-sans-serif', 'system-ui'],
       },
       borderRadius: {
         lg: "var(--radius)",

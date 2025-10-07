@@ -74,7 +74,7 @@ export function SectionCard({ section, templateId, isFirst, isLast, allSections,
       </CardHeader>
       <CardContent className="space-y-4">
         {editing && !disabled && (
-          <div className="rounded-md border bg-white/70 p-4">
+          <div className="rounded-2xl border-0 bg-[#f1f4f9] p-6 [box-shadow:inset_6px_6px_12px_rgba(163,177,198,0.25),inset_-6px_-6px_12px_rgba(255,255,255,0.8)]">
             <SectionForm
               templateId={templateId}
               sectionId={section.id}
@@ -91,7 +91,7 @@ export function SectionCard({ section, templateId, isFirst, isLast, allSections,
         )}
 
         {fieldCount === 0 ? (
-          <div className="rounded-md border border-dashed bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-[#c8d3e2] bg-[#f4f7fb] p-10 text-center text-sm text-[#6b7280] [box-shadow:inset_4px_4px_8px_rgba(163,177,198,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.7)]">
             No fields in this section yet.
           </div>
         ) : (

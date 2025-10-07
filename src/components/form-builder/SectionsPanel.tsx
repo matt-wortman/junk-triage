@@ -41,7 +41,7 @@ export function SectionsPanel({ templateId, sections, disabled = false }: Sectio
       </header>
 
       {showCreateForm && (
-        <div className="rounded-lg border bg-white p-6">
+        <div className="rounded-3xl border-0 bg-white p-8 [box-shadow:6px_6px_12px_rgba(163,177,198,0.35),-6px_-6px_12px_rgba(255,255,255,0.8)]">
           <h3 className="text-base font-semibold text-foreground">New section</h3>
           <p className="mb-4 text-sm text-muted-foreground">
             Provide a code and title to create a new section in this template.
@@ -56,7 +56,7 @@ export function SectionsPanel({ templateId, sections, disabled = false }: Sectio
       )}
 
       {sections.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-white p-12 text-center text-sm text-muted-foreground">
+        <div className="rounded-3xl border border-dashed border-[#c8d3e2] bg-[#f4f7fb] p-12 text-center text-sm text-[#6b7280] [box-shadow:inset_4px_4px_8px_rgba(163,177,198,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.75)]">
           No sections yet. Create your first section to start outlining the form.
         </div>
       ) : (

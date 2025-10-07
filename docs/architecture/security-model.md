@@ -66,6 +66,14 @@ BASIC_AUTH_PASSWORD=your-secure-password
 ✅ **Proper WWW-Authenticate header** triggers browser password prompt
 ✅ **Environment-based credentials** keep secrets out of code
 ✅ **Fail-closed guard** returns HTTP 500 if credentials are missing, preventing anonymous access due to misconfiguration
+✅ **Sanitized logging** redacts payloads from production console output
+
+### Current Tester Identity (Shared User)
+
+While the platform still relies on Basic Auth, everyone signs in with the same credentials during user testing. To keep listings consistent, the application now resolves the "current user" to a static identifier (`shared-user`, overrideable via `NEXT_PUBLIC_TEST_USER_ID`). As a result, all authenticated testers can see every draft and submission by default.
+
+- **Implication:** There is no per-user isolation today. All authenticated requests share the same identifier in the database.
+- **Mitigation:** Continue to treat basic-auth credentials as confidential. When real user accounts arrive, replace the shared identifier with the authenticated subject ID and reintroduce per-user filters or RBAC as needed.
 
 ## Security Issues & Mitigations
 

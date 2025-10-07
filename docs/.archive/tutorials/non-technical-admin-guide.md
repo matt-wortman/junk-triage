@@ -98,7 +98,7 @@ Use a **Data Table** when you want to capture several related fields per row (co
 
 ## 6. Save Drafts and Publish
 
-- **Save Draft:** Use the **Save Draft** button to capture your progress. You can revisit and edit any time. Drafts are no longer private to your browser tab—everyone authenticated with the shared credentials can view and continue any draft.
+- **Save Draft:** Use the **Save Draft** button to capture your progress. You can revisit and edit any time.
 - **Publish Template:** When you’re confident, click **Publish Template**. Published templates appear to anyone visiting `/dynamic-form`.
 - **Versioning:** If you need changes later, duplicate the template, edit the copy, and bump the version number to keep history.
 
@@ -109,7 +109,7 @@ Use a **Data Table** when you want to capture several related fields per row (co
 1. Visit `/dynamic-form` (link is in the builder header).
 2. Complete the form as a test submission. Use mock data.
 3. Verify that saving a draft works (click “Save Draft”) and that loading the draft restores your answers.
-4. Submit the test form. You’ll be redirected to the combined drafts/submissions list, which now shows every record created by anyone using the shared credentials.
+4. Submit the test form. You’ll be redirected to a list of your submissions and drafts.
 
 ---
 

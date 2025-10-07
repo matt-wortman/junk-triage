@@ -1,10 +1,13 @@
 'use server'
 
+import { randomUUID } from 'crypto'
+
 import { prisma } from '@/lib/prisma'
 import { SubmissionStatus, Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
-import { FormResponse, RepeatableGroupData } from '@/lib/form-engine/types'
+import { FormResponse, RepeatableGroupData, FormTemplateWithSections } from '@/lib/form-engine/types'
 import { formSubmissionPayloadSchema } from '@/lib/validation/form-submission'
+import { logger } from '@/lib/logger'
 
 export interface FormSubmissionData {
   templateId: string
@@ -19,95 +22,150 @@ export interface FormSubmissionResult {
   error?: string
 }
 
+
+const DEFAULT_SHARED_USER_ID =
+  process.env.TEST_USER_ID || process.env.NEXT_PUBLIC_TEST_USER_ID || 'shared-user'
+
+function resolveUserId(userId?: string) {
+  if (userId && userId.trim().length > 0) {
+    return userId.trim()
+  }
+  return DEFAULT_SHARED_USER_ID
+}
+
 /**
  * Submit a completed form response to the database
  */
 export async function submitFormResponse(
   data: FormSubmissionData,
-  userId: string = 'anonymous'
+  userId?: string,
+  existingDraftId?: string
 ): Promise<FormSubmissionResult> {
   try {
     const payload = formSubmissionPayloadSchema.parse(data)
+    const resolvedUser = resolveUserId(userId)
 
     // Start a database transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
-      // Create the form submission
+      // Attempt to reuse an existing draft if a draft ID is provided
+      if (existingDraftId) {
+        const draft = await tx.formSubmission.findFirst({
+          where: {
+            id: existingDraftId,
+            status: SubmissionStatus.DRAFT,
+          },
+        })
+
+        if (draft) {
+          // Clear out any draft responses before reusing the submission record
+          await tx.questionResponse.deleteMany({
+            where: { submissionId: draft.id },
+          })
+
+          await tx.repeatableGroupResponse.deleteMany({
+            where: { submissionId: draft.id },
+          })
+
+          await tx.calculatedScore.deleteMany({
+            where: { submissionId: draft.id },
+          })
+
+          const submission = await tx.formSubmission.update({
+            where: { id: draft.id },
+            data: {
+              status: SubmissionStatus.SUBMITTED,
+              submittedBy: resolvedUser,
+              submittedAt: new Date(),
+              updatedAt: new Date(),
+            },
+          })
+
+          await createSubmissionData(tx, submission.id, payload)
+
+          return submission
+        }
+      }
+
+      // Create a new submission if no draft was reused
       const submission = await tx.formSubmission.create({
         data: {
           templateId: payload.templateId,
-          submittedBy: userId,
+          submittedBy: resolvedUser,
           status: SubmissionStatus.SUBMITTED,
           submittedAt: new Date(),
         },
       })
 
-      // Store individual question responses
-      const responseEntries = Object.entries(payload.responses).map(
-        ([questionCode, value]) => ({
-          submissionId: submission.id,
-          questionCode,
-          value: value as Prisma.InputJsonValue,
-        })
-      )
-
-      if (responseEntries.length > 0) {
-        await tx.questionResponse.createMany({
-          data: responseEntries,
-        })
-      }
-
-      // Store repeatable group responses
-      const repeatGroupEntries = Object.entries(payload.repeatGroups).flatMap(
-        ([questionCode, rows]) =>
-          Array.isArray(rows)
-            ? rows.map((rowData, index) => ({
-                submissionId: submission.id,
-                questionCode,
-                rowIndex: index,
-                data: rowData as Prisma.InputJsonValue,
-              }))
-            : []
-      )
-
-      if (repeatGroupEntries.length > 0) {
-        await tx.repeatableGroupResponse.createMany({
-          data: repeatGroupEntries,
-        })
-      }
-
-      // Store calculated scores
-      if (payload.calculatedScores && typeof payload.calculatedScores === 'object') {
-        const scoreEntries = Object.entries(payload.calculatedScores)
-          .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
-          .map(([scoreType, value]) => ({
-            submissionId: submission.id,
-            scoreType,
-            value: Number(value),
-          }))
-
-        if (scoreEntries.length > 0) {
-          await tx.calculatedScore.createMany({
-            data: scoreEntries,
-          })
-        }
-      }
+      await createSubmissionData(tx, submission.id, payload)
 
       return submission
     })
 
-    // Revalidate the drafts page to reflect changes
+    // Revalidate pages to reflect changes
     revalidatePath('/dynamic-form/drafts')
+    revalidatePath('/dynamic-form/submissions')
 
     return {
       success: true,
       submissionId: result.id,
     }
   } catch (error) {
-    console.error('Error submitting form:', error)
+    logger.error('Error submitting form', error)
 
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
+    }
+  }
+}
+
+async function createSubmissionData(
+  tx: Prisma.TransactionClient,
+  submissionId: string,
+  payload: ReturnType<typeof formSubmissionPayloadSchema.parse>
+) {
+  const responseEntries = Object.entries(payload.responses).map(([questionCode, value]) => ({
+    submissionId,
+    questionCode,
+    value: value as Prisma.InputJsonValue,
+  }))
+
+  if (responseEntries.length > 0) {
+    await tx.questionResponse.createMany({
+      data: responseEntries,
+    })
+  }
+
+  const repeatGroupEntries = Object.entries(payload.repeatGroups).flatMap(([questionCode, rows]) =>
+    Array.isArray(rows)
+      ? rows.map((rowData, index) => ({
+          submissionId,
+          questionCode,
+          rowIndex: index,
+          data: rowData as Prisma.InputJsonValue,
+        }))
+      : []
+  )
+
+  if (repeatGroupEntries.length > 0) {
+    await tx.repeatableGroupResponse.createMany({
+      data: repeatGroupEntries,
+    })
+  }
+
+  if (payload.calculatedScores && typeof payload.calculatedScores === 'object') {
+    const scoreEntries = Object.entries(payload.calculatedScores)
+      .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+      .map(([scoreType, value]) => ({
+        submissionId,
+        scoreType,
+        value: Number(value),
+      }))
+
+    if (scoreEntries.length > 0) {
+      await tx.calculatedScore.createMany({
+        data: scoreEntries,
+      })
     }
   }
 }
@@ -117,18 +175,30 @@ export async function submitFormResponse(
  */
 export async function saveDraftResponse(
   data: FormSubmissionData,
-  userId: string = 'anonymous',
+  userId?: string,
   existingDraftId?: string
 ): Promise<FormSubmissionResult> {
   try {
     const payload = formSubmissionPayloadSchema.parse(data)
+    const trimmedUserId = userId && userId.trim().length > 0 ? userId.trim() : undefined
 
     // Check if we're updating an existing draft
     if (existingDraftId) {
       const result = await prisma.$transaction(async (tx) => {
+        const existingDraft = await tx.formSubmission.findFirst({
+          where: {
+            id: existingDraftId,
+            status: SubmissionStatus.DRAFT,
+          },
+        })
+
+        if (!existingDraft) {
+          throw new Error('Draft not found or access denied')
+        }
+
         // Update the existing submission
         const submission = await tx.formSubmission.update({
-          where: { id: existingDraftId },
+          where: { id: existingDraft.id },
           data: {
             updatedAt: new Date(),
           },
@@ -209,7 +279,7 @@ export async function saveDraftResponse(
         const submission = await tx.formSubmission.create({
           data: {
             templateId: payload.templateId,
-            submittedBy: userId,
+            submittedBy: trimmedUserId ?? resolveUserId(userId),
             status: SubmissionStatus.DRAFT,
           },
         })
@@ -271,7 +341,7 @@ export async function saveDraftResponse(
       }
     }
   } catch (error) {
-    console.error('Error saving draft:', error)
+    logger.error('Error saving draft', error)
 
     return {
       success: false,
@@ -283,12 +353,11 @@ export async function saveDraftResponse(
 /**
  * Load a draft form response from the database
  */
-export async function loadDraftResponse(draftId: string, userId: string = 'anonymous') {
+export async function loadDraftResponse(draftId: string, userId?: string) {
   try {
     const submission = await prisma.formSubmission.findFirst({
       where: {
         id: draftId,
-        submittedBy: userId,
         status: SubmissionStatus.DRAFT,
       },
       include: {
@@ -335,7 +404,7 @@ export async function loadDraftResponse(draftId: string, userId: string = 'anony
       submissionId: submission.id,
     }
   } catch (error) {
-    console.error('Error loading draft:', error)
+    logger.error('Error loading draft', error)
 
     return {
       success: false,
@@ -347,12 +416,11 @@ export async function loadDraftResponse(draftId: string, userId: string = 'anony
 /**
  * Delete a draft form response
  */
-export async function deleteDraftResponse(draftId: string, userId: string = 'anonymous') {
+export async function deleteDraftResponse(draftId: string, userId?: string) {
   try {
     const submission = await prisma.formSubmission.findFirst({
       where: {
         id: draftId,
-        submittedBy: userId,
         status: SubmissionStatus.DRAFT,
       },
     })
@@ -375,7 +443,7 @@ export async function deleteDraftResponse(draftId: string, userId: string = 'ano
       success: true,
     }
   } catch (error) {
-    console.error('Error deleting draft:', error)
+    logger.error('Error deleting draft', error)
 
     return {
       success: false,
@@ -387,13 +455,20 @@ export async function deleteDraftResponse(draftId: string, userId: string = 'ano
 /**
  * Get all drafts for a user
  */
-export async function getUserDrafts(userId: string = 'anonymous') {
+type ListScope = 'all' | 'user'
+
+export async function getUserDrafts(userId?: string, scope: ListScope = 'all') {
   try {
+    const where: Prisma.FormSubmissionWhereInput = {
+      status: SubmissionStatus.DRAFT,
+    }
+
+    if (scope === 'user' && userId && userId.trim().length > 0) {
+      where.submittedBy = userId.trim()
+    }
+
     const drafts = await prisma.formSubmission.findMany({
-      where: {
-        submittedBy: userId,
-        status: SubmissionStatus.DRAFT,
-      },
+      where,
       include: {
         template: {
           select: {
@@ -457,11 +532,186 @@ export async function getUserDrafts(userId: string = 'anonymous') {
           templateVersion: draft.template.version,
           createdAt: draft.createdAt,
           updatedAt: draft.updatedAt,
+          submittedBy: draft.submittedBy,
         }
       }),
     }
   } catch (error) {
-    console.error('Error fetching drafts:', error)
+    logger.error('Error fetching drafts', error)
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    }
+  }
+}
+
+/**
+ * Get all non-draft submissions for a user
+ */
+export async function getUserSubmissions(userId?: string, scope: ListScope = 'all') {
+  try {
+    const where: Prisma.FormSubmissionWhereInput = {
+      status: {
+        in: [SubmissionStatus.SUBMITTED, SubmissionStatus.REVIEWED, SubmissionStatus.ARCHIVED],
+      },
+    }
+
+    if (scope === 'user' && userId && userId.trim().length > 0) {
+      where.submittedBy = userId.trim()
+    }
+
+    const submissions = await prisma.formSubmission.findMany({
+      where,
+      include: {
+        template: {
+          select: {
+            name: true,
+            version: true,
+            sections: {
+              select: {
+                questions: {
+                  select: {
+                    fieldCode: true,
+                    label: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          select: {
+            questionCode: true,
+            value: true,
+          },
+        },
+      },
+      orderBy: [
+        { submittedAt: 'desc' },
+        { updatedAt: 'desc' },
+      ],
+    })
+
+    return {
+      success: true,
+      submissions: submissions.map((submission) => {
+        const technologyIdCodes = new Set<string>()
+        submission.template.sections.forEach((section) => {
+          section.questions.forEach((question) => {
+            const label = question.label.toLowerCase()
+            if (label.includes('technology id')) {
+              technologyIdCodes.add(question.fieldCode)
+            }
+          })
+        })
+
+        let submissionName: string | undefined
+        if (technologyIdCodes.size > 0) {
+          const techIdResponse = submission.responses.find((response) =>
+            technologyIdCodes.has(response.questionCode)
+          )
+          if (techIdResponse) {
+            const rawValue = techIdResponse.value
+            if (typeof rawValue === 'string') {
+              submissionName = rawValue.trim()
+            } else if (typeof rawValue === 'number') {
+              submissionName = String(rawValue)
+            }
+          }
+        }
+
+        return {
+          id: submission.id,
+          templateName: submissionName && submissionName.length > 0 ? submissionName : submission.template.name,
+          templateVersion: submission.template.version,
+          status: submission.status,
+          createdAt: submission.createdAt,
+          updatedAt: submission.updatedAt,
+          submittedAt: submission.submittedAt,
+          submittedBy: submission.submittedBy,
+        }
+      }),
+    }
+  } catch (error) {
+    logger.error('Error fetching submissions', error)
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    }
+  }
+}
+
+export async function getSubmissionDetail(submissionId: string) {
+  try {
+    const submission = await prisma.formSubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        template: {
+          include: {
+            sections: {
+              include: {
+                questions: {
+                  include: {
+                    options: true,
+                    scoringConfig: true,
+                  },
+                  orderBy: { order: 'asc' },
+                },
+              },
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+        responses: true,
+        repeatGroups: true,
+        scores: true,
+      },
+    })
+
+    if (!submission || !submission.template) {
+      return {
+        success: false,
+        error: 'Submission not found',
+      }
+    }
+
+    const responses: FormResponse = {}
+    submission.responses.forEach((response) => {
+      responses[response.questionCode] = response.value as FormResponse[string]
+    })
+
+    const repeatGroups: RepeatableGroupData = {}
+    submission.repeatGroups.forEach((group) => {
+      if (!repeatGroups[group.questionCode]) {
+        repeatGroups[group.questionCode] = []
+      }
+      repeatGroups[group.questionCode][group.rowIndex] = group.data as Record<string, unknown>
+    })
+
+    const calculatedScores = submission.scores.reduce<Record<string, number>>((acc, score) => {
+      acc[score.scoreType] = score.value
+      return acc
+    }, {})
+
+    return {
+      success: true,
+      data: {
+        template: submission.template as FormTemplateWithSections,
+        submissionId: submission.id,
+        status: submission.status,
+        submittedAt: submission.submittedAt,
+        submittedBy: submission.submittedBy,
+        createdAt: submission.createdAt,
+        updatedAt: submission.updatedAt,
+        responses,
+        repeatGroups,
+        calculatedScores,
+      },
+    }
+  } catch (error) {
+    logger.error('Error loading submission detail', error)
 
     return {
       success: false,

@@ -322,66 +322,67 @@ const DynamicRepeatableTable: React.FC<
   return (
     <div className={`space-y-4 ${error ? 'border border-red-500 rounded-lg p-4' : ''}`}>
       {rows.length > 0 && (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {resolvedColumns.map((column) => (
-                  <TableHead key={column.key}>
-                    {column.label}
-                    {column.required && <span className="ml-1 text-red-500">*</span>}
-                  </TableHead>
-                ))}
-                <TableHead className="w-[100px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row, index) => (
-                <TableRow key={index}>
-                  {resolvedColumns.map((column) => {
-                    const cellValue = row[column.key];
-                    const stringValue = cellValue === null || cellValue === undefined ? '' : String(cellValue);
-
-                    return (
-                      <TableCell key={column.key}>
-                        {column.type === 'textarea' ? (
-                          <Textarea
-                            value={stringValue}
-                            onChange={(event) => handleUpdateRow(index, column.key, event.target.value)}
-                            placeholder={`Enter ${column.label.toLowerCase()}`}
-                            disabled={disabled}
-                            className="min-h-[60px]"
-                            rows={2}
-                          />
-                        ) : (
-                          <Input
-                            type={column.type === 'number' ? 'number' : 'text'}
-                            value={stringValue}
-                            onChange={(event) => handleUpdateRow(index, column.key, event.target.value)}
-                            placeholder={`Enter ${column.label.toLowerCase()}`}
-                            disabled={disabled}
-                          />
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                  <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveRow(index)}
-                      disabled={disabled || !canRemoveRows}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+        <Table
+          wrapperClassName="neumorphic-table-container"
+          className="neumorphic-table"
+        >
+          <TableHeader>
+            <TableRow>
+              {resolvedColumns.map((column) => (
+                <TableHead key={column.key}>
+                  {column.label}
+                  {column.required && <span className="ml-1 text-red-500">*</span>}
+                </TableHead>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+              <TableHead className="w-[100px] text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row, index) => (
+              <TableRow key={index}>
+                {resolvedColumns.map((column) => {
+                  const cellValue = row[column.key];
+                  const stringValue = cellValue === null || cellValue === undefined ? '' : String(cellValue);
+
+                  return (
+                    <TableCell key={column.key}>
+                      {column.type === 'textarea' ? (
+                        <Textarea
+                          value={stringValue}
+                          onChange={(event) => handleUpdateRow(index, column.key, event.target.value)}
+                          placeholder={`Enter ${column.label.toLowerCase()}`}
+                          disabled={disabled}
+                          className="min-h-[60px]"
+                          rows={2}
+                        />
+                      ) : (
+                        <Input
+                          type={column.type === 'number' ? 'number' : 'text'}
+                          value={stringValue}
+                          onChange={(event) => handleUpdateRow(index, column.key, event.target.value)}
+                          placeholder={`Enter ${column.label.toLowerCase()}`}
+                          disabled={disabled}
+                        />
+                      )}
+                    </TableCell>
+                  );
+                })}
+                <TableCell className="text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveRow(index)}
+                    disabled={disabled || !canRemoveRows}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       <div className="space-y-2">
@@ -402,7 +403,7 @@ const DynamicRepeatableTable: React.FC<
         )}
         {rows.length === 0 && (
           <p className="text-xs text-muted-foreground text-center">
-            No entries yet. Click "Add row" to create the first entry.
+            No entries yet. Click &ldquo;Add row&rdquo; to create the first entry.
           </p>
         )}
       </div>
@@ -418,7 +419,7 @@ const DynamicRepeatableTable: React.FC<
 
 const DataTableSelectorField: React.FC<
   FieldProps & { config: RepeatableGroupConfig | null }
-> = ({ question, value, onChange, error, disabled, config }) => {
+> = ({ value, onChange, error, disabled, config }) => {
   const rowsConfig = config?.rows ?? [];
   const selectorColumnKey = config?.selectorColumnKey || 'include';
   const checkboxColumn = config?.columns.find((column) => column.key === selectorColumnKey);
@@ -491,8 +492,10 @@ const DataTableSelectorField: React.FC<
 
   return (
     <div className={`space-y-4 ${error ? 'border border-red-500 rounded-lg p-4' : ''}`}>
-      <div className="rounded-md border">
-        <Table>
+      <Table
+        wrapperClassName="neumorphic-table-container"
+        className="neumorphic-table"
+      >
           <TableHeader>
             <TableRow>
               <TableHead className="w-16 text-center">{includeLabel}</TableHead>
@@ -539,7 +542,6 @@ const DataTableSelectorField: React.FC<
             ))}
           </TableBody>
         </Table>
-      </div>
       {error && (
         <p className="text-xs text-red-500">{error}</p>
       )}

@@ -12,22 +12,18 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="text-primary font-bold text-xl">✚</div>
-              <span className="font-semibold text-lg">Company</span>
+              <span className="font-semibold text-lg">CCHMC</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <Link href="/" className="text-foreground hover:text-primary border-b-2 border-primary pb-1">
                 Home
               </Link>
-              <Link href="/about" className="text-muted-foreground hover:text-foreground">
-                About
-              </Link>
-              <Link href="/contact" className="text-muted-foreground hover:text-foreground">
-                Contact
-              </Link>
               <Link href="/dynamic-form/builder" className="text-muted-foreground hover:text-foreground">
                 Builder
               </Link>
-              <Button>Login</Button>
+              <Link href="/dynamic-form">
+                <Button>Start Evaluation</Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -99,72 +95,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Web Form Preview Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Web Form Preview</h2>
-
-          <div className="grid lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">Technology Name</h3>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">Business Impact</h3>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-full"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">Implementation Complexity</h3>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-semibold mb-2">Resource Requirements</h3>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-4/5"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Strategic Alignment Scoring Visual */}
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Strategic Alignment</h3>
-              <div className="flex space-x-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((score, index) => (
-                  <div
-                    key={score}
-                    className={`w-6 h-6 rounded-full ${
-                      index === 6 ? 'bg-primary' : 'bg-gray-200'
-                    }`}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </section>
 

@@ -1,4 +1,4 @@
-# Azure Deployment Runbook — Successful Push (Updated 2025-10-05)
+# Azure Deployment Runbook — Successful Push (Updated 2025-10-04)
 
 This log captures every command and condition used to deploy the Tech Triage Platform container to Azure when applying an incremental image update despite ongoing Key Vault RBAC issues. The same sequence succeeded on 2025-10-03 (`ca6`) and again on 2025-10-04 (`ca9`).
 
@@ -8,7 +8,6 @@ This log captures every command and condition used to deploy the Tech Triage Pla
 - Local repo up to date with latest code changes (PDF export, documentation updates).
 - Able to run `az` CLI with permissions to ACR and App Service.
 - Key Vault RBAC still **not** granting secret reads. Plan to supply secrets manually if using `scripts/deploy-to-azure.sh` (not needed for this build).
-- Optional: Set `NEXT_PUBLIC_TEST_USER_ID` if you want the shared tester identity to display something other than the default `shared-user` label.
 
 ---
 ## 1. Build and Push Image to Azure Container Registry
@@ -16,8 +15,8 @@ This log captures every command and condition used to deploy the Tech Triage Pla
 # From repo root: /home/matt/code_projects/Junk/tech-triage-platform
 az acr build --registry innovationventures --image tech-triage-platform:prod .
 ```
-- Build succeeded (most recent run `caa` on 2025-10-05; previous runs `ca6` and `ca9` remain for reference).
-- Latest resulting digest: `sha256:eb61a04a80a1cc7c7c8b17030c0d2d3e09860156b4763af2bb2fa05c308864ac`.
+- Build succeeded (Run IDs: `ca6` on 2025-10-03 and `ca9` on 2025-10-04).
+- Latest resulting digest: `sha256:63c43a9dfdadba3b277ff93299e3395532d3a156e9f40f03dd45de0bf87ff53b`.
 - Build log confirms Next.js build completed and image pushed.
 
 > **Note:** Because `/dynamic-form/builder/page.tsx` exports `dynamic = 'force-dynamic'`, the build no longer needs a live `DATABASE_URL` during the static rendering step.
@@ -35,7 +34,7 @@ curl -s https://tech-triage-app.azurewebsites.net/api/health
 ```
 Expected response:
 ```json
-{"status":"healthy","timestamp":"2025-10-05T19:15:33.010Z","database":"connected"}
+{"status":"healthy","timestamp":"2025-10-04T17:18:06.377Z","database":"connected"}
 ```
 
 ---

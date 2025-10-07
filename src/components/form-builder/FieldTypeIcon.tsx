@@ -32,7 +32,7 @@ export function FieldTypeIcon({ type, size = 'md', withLabel = false }: FieldTyp
   const iconElement = (
     <span
       className={cn(
-        'inline-flex items-center justify-center rounded-md border border-border bg-muted/40 text-muted-foreground transition-colors',
+        'inline-flex items-center justify-center rounded-2xl border-0 bg-[#e0e5ec] text-[#475569] transition-all [box-shadow:4px_4px_8px_rgba(163,177,198,0.3),-4px_-4px_8px_rgba(255,255,255,0.8)]',
         WRAPPER_SIZES[size]
       )}
     >
@@ -43,7 +43,7 @@ export function FieldTypeIcon({ type, size = 'md', withLabel = false }: FieldTyp
   const trigger = withLabel ? (
     <span className="inline-flex items-center gap-2">
       {iconElement}
-      <span className="text-sm font-medium text-muted-foreground">{config.label}</span>
+      <span className="text-sm font-medium text-[#475569]">{config.label}</span>
     </span>
   ) : (
     iconElement

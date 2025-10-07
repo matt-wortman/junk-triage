@@ -18,7 +18,7 @@ const AlertDialogOverlay = React.forwardRef<
   <AlertDialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80",
+      "fixed inset-0 z-50 bg-black/40 backdrop-blur-sm",
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
@@ -37,8 +37,8 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2",
-        "gap-4 border bg-background p-6 shadow-lg duration-200",
+        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-xl -translate-x-1/2 -translate-y-1/2",
+        "gap-6 rounded-3xl border-0 bg-[#e0e5ec] p-7 shadow-none [box-shadow:12px_12px_24px_#a3b1c6,_-12px_-12px_24px_rgba(255,255,255,0.7)] duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
         "data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
@@ -103,9 +103,9 @@ const AlertDialogAction = React.forwardRef<
   <AlertDialogPrimitive.Action
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium",
-      "text-primary-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
-      "focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex h-11 items-center justify-center rounded-xl bg-[#3b82f6] px-5 text-sm font-semibold text-white",
+      "transition-all focus:outline-none focus:ring-0 disabled:pointer-events-none disabled:opacity-50",
+      "[box-shadow:5px_5px_12px_rgba(59,130,246,0.35),-5px_-5px_12px_rgba(255,255,255,0.6)] hover:[box-shadow:inset_4px_4px_8px_rgba(59,130,246,0.35),inset_-4px_-4px_8px_rgba(255,255,255,0.8)]",
       className
     )}
     {...props}
@@ -120,10 +120,9 @@ const AlertDialogCancel = React.forwardRef<
   <AlertDialogPrimitive.Cancel
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md border border-input bg-transparent",
-      "px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
-      "focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-      "hover:bg-accent hover:text-accent-foreground",
+      "inline-flex h-11 items-center justify-center rounded-xl border-0 bg-[#e0e5ec] px-5 text-sm font-medium text-[#353535]",
+      "transition-all focus:outline-none focus:ring-0 disabled:pointer-events-none disabled:opacity-50",
+      "[box-shadow:5px_5px_12px_rgba(163,177,198,0.35),-5px_-5px_12px_rgba(255,255,255,0.7)] hover:[box-shadow:inset_4px_4px_8px_rgba(163,177,198,0.25),inset_-4px_-4px_8px_rgba(255,255,255,0.8)]",
       className
     )}
     {...props}

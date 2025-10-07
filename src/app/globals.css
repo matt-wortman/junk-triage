@@ -130,3 +130,49 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.neumorphic-table-container {
+  background: #e0e5ec;
+  border-radius: 1.5rem;
+  box-shadow: 5px 5px 12px #a3b1c6, -5px -5px 12px rgba(255, 255, 255, 0.6);
+  padding: 1.5rem;
+}
+
+.neumorphic-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 1.25rem;
+  background: #f8fafc;
+  box-shadow: inset 3px 3px 6px rgba(163, 177, 198, 0.35), inset -3px -3px 6px rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+}
+
+.neumorphic-table thead tr {
+  background: linear-gradient(145deg, #eff3fb, #ffffff);
+}
+
+.neumorphic-table th {
+  font-weight: 600;
+  color: #1f2937;
+  padding: 0.75rem 1rem;
+  text-transform: none;
+}
+
+.neumorphic-table td {
+  padding: 0.65rem 1rem;
+  color: #1f2937;
+}
+
+.neumorphic-table tbody tr + tr {
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.neumorphic-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.08);
+  transition: background 0.2s ease;
+}
+
+.neumorphic-table tbody tr:hover td {
+  color: #1f2937;
+}

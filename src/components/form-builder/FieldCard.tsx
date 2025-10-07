@@ -88,7 +88,7 @@ export function FieldCard({ question, isFirst, isLast, disabled = false }: Field
   }
 
   return (
-    <div className="rounded-md border bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border-0 bg-white p-6 [box-shadow:5px_5px_10px_rgba(163,177,198,0.4),-5px_-5px_10px_rgba(255,255,255,0.7)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -165,7 +165,7 @@ export function FieldCard({ question, isFirst, isLast, disabled = false }: Field
           </div>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <div className="mt-4 flex flex-wrap gap-3 text-xs text-[#6b7280]">
         {question.placeholder && <span>Placeholder: {question.placeholder}</span>}
         {optionCount > 0 && <span>{optionCount} option{optionCount === 1 ? '' : 's'}</span>}
         {question.scoringConfig && <span>Scoring configured</span>}

@@ -57,6 +57,8 @@ const selectionTypes = new Set<FieldType>([
   FieldType.MULTI_SELECT,
 ])
 
+const DEFAULT_SELECTOR_ROW_COUNT = 3
+
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -182,7 +184,6 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
     if (isSelectorDataTable) {
       const parsedConfig = parseRepeatableGroupConfig(field.repeatableConfig)
       if (parsedConfig?.mode === 'predefined') {
-        const selectorKey = parsedConfig.selectorColumnKey || 'include'
         const checkboxColumn = parsedConfig.columns.find((column) => column.type === 'checkbox')
         const noteColumn = parsedConfig.columns.find((column) => column.type !== 'checkbox')
 
@@ -207,7 +208,7 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
         }
 
         // lock min/max rows to predefined length
-        const totalRows = parsedConfig.rows?.length ?? selectorRows.length
+        const totalRows = parsedConfig.rows?.length ?? DEFAULT_SELECTOR_ROW_COUNT
         setTableMinRows(String(totalRows))
         setTableMaxRows(String(totalRows))
       } else {
@@ -586,7 +587,7 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
           <DialogTitle>Configure field</DialogTitle>
         </DialogHeader>
         <div className="mt-4 space-y-6">
-          <div className="flex items-center gap-3 rounded-md border bg-muted/30 p-3">
+          <div className="flex items-center gap-3 rounded-2xl border-0 bg-[#f1f4f9] p-4 [box-shadow:inset_6px_6px_12px_rgba(163,177,198,0.2),inset_-6px_-6px_12px_rgba(255,255,255,0.85)]">
             <FieldTypeIcon type={field.type} size="md" />
             <div>
               <p className="text-sm font-semibold text-foreground">{labelValue || field.label}</p>
@@ -793,7 +794,7 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
                   const requiredId = `table-column-required-${column.id}`
 
                   return (
-                    <div key={column.id} className="space-y-3 rounded-md border p-3">
+                    <div key={column.id} className="space-y-3 rounded-2xl border-0 bg-white p-5 [box-shadow:5px_5px_12px_rgba(163,177,198,0.3),-5px_-5px_12px_rgba(255,255,255,0.75)]">
                       <div className="space-y-2">
                         <Label htmlFor={labelId}>Column label</Label>
                         <Input
@@ -806,13 +807,7 @@ export function FieldConfigModal({ field, open, onOpenChange, onSaved }: FieldCo
                       <div className="grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-center">
                         <div className="space-y-1">
                           <Label htmlFor={keyId}>Database field</Label>
-                          <Input
-                            id={keyId}
-                            value={column.key}
-                            readOnly
-                            tabIndex={-1}
-                            className="bg-muted text-muted-foreground"
-                          />
+                          <Input id={keyId} value={column.key} readOnly tabIndex={-1} />
                         </div>
                         <div className="space-y-1">
                           <Label htmlFor={typeId}>Input type</Label>

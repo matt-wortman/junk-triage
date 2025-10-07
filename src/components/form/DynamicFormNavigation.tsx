@@ -5,9 +5,10 @@ import { Progress } from '@/components/ui/progress';
 import { ChevronLeft, ChevronRight, Download, Save, Send } from 'lucide-react';
 import { useFormEngine } from '@/lib/form-engine/renderer';
 import { shouldShowField, shouldRequireField, parseConditionalConfig } from '@/lib/form-engine/conditional-logic';
-import { ValidationRule } from '@/lib/form-engine/types';
+import { FieldType, ValidationRule } from '@/lib/form-engine/types';
 import { parseValidationMetadata } from '@/lib/form-engine/json-utils';
 import { toast } from 'sonner';
+import { getClientLogger } from '@/lib/session';
 
 type SubmissionStatusValue = 'DRAFT' | 'SUBMITTED' | 'REVIEWED' | 'ARCHIVED';
 
@@ -33,6 +34,7 @@ export function DynamicFormNavigation({
     currentSection,
     responses,
     repeatGroups,
+    calculatedScores,
     nextSection,
     previousSection,
     submitForm,
@@ -99,16 +101,15 @@ export function DynamicFormNavigation({
 
       toast.success('PDF export ready for download');
     } catch (error) {
-      console.error('❌ Export PDF failed:', error);
+      getClientLogger().error('Export PDF failed', error);
       toast.error('An unexpected error occurred while preparing the PDF');
     } finally {
       setIsExporting(false);
     }
   };
 
-  const skipSectionValidation =
-    process.env.NODE_ENV === 'development' ||
-    process.env.NEXT_PUBLIC_ALLOW_SECTION_SKIP === 'true';
+  // Always allow section navigation even when required fields are missing; final submission still validates.
+  const skipSectionValidation = true;
 
   const handleNext = () => {
     if (isLastSection) {
@@ -123,11 +124,11 @@ export function DynamicFormNavigation({
       });
 
       if (!skipSectionValidation) {
-        console.log('❌ Validation failed, blocking navigation:', validationResult.errors);
+        getClientLogger().warn('Validation failed, blocking navigation', validationResult.errors);
         return;
       }
 
-      console.log('⚠️  Validation failed, but advancing due to relaxed section rules');
+      getClientLogger().info('Validation failed but navigation allowed due to relaxed rules');
     }
 
     nextSection();
@@ -147,9 +148,19 @@ export function DynamicFormNavigation({
         if (!isVisible) continue;
 
         const isRequired = shouldRequireField(conditionalConfig, question.isRequired, responses);
-        const value = responses[question.fieldCode];
+        const value =
+          question.type === FieldType.REPEATABLE_GROUP || question.type === FieldType.DATA_TABLE_SELECTOR
+            ? repeatGroups[question.fieldCode]
+            : responses[question.fieldCode];
 
-        if (isRequired && (value === undefined || value === null || value === '' || value === false || (Array.isArray(value) && value.length === 0))) {
+        const isEmptyValue =
+          value === undefined ||
+          value === null ||
+          value === '' ||
+          value === false ||
+          (Array.isArray(value) && value.length === 0);
+
+        if (isRequired && isEmptyValue) {
           let errorMessage = `${question.label} is required`;
 
           if (question.validation) {
@@ -200,11 +211,11 @@ export function DynamicFormNavigation({
     const formData = {
       responses,
       repeatGroups,
-      calculatedScores: null // TODO: Implement scoring calculation
+      calculatedScores,
     };
 
     if (onSaveDraft) {
-      console.log('💾 Saving draft with data:', formData);
+      getClientLogger().info('Saving draft', { hasResponses: hasResponseValues(responses, repeatGroups) });
       onSaveDraft(formData);
     } else {
       saveDraft();
@@ -215,7 +226,7 @@ export function DynamicFormNavigation({
     const formData = {
       responses,
       repeatGroups,
-      calculatedScores: null // TODO: Implement scoring calculation
+      calculatedScores,
     };
 
     const validationResult = validateAllSections();
@@ -229,7 +240,7 @@ export function DynamicFormNavigation({
     }
 
     if (onSubmit) {
-      console.log('📝 Submitting form with data:', formData);
+      getClientLogger().info('Submitting form', { hasResponses: hasResponseValues(responses, repeatGroups) });
       onSubmit(formData);
     } else {
       submitForm();
@@ -239,40 +250,53 @@ export function DynamicFormNavigation({
   const progressValue = ((currentSection + 1) / totalSections) * 100;
 
   return (
-    <Card>
+    <Card className="bg-[#e0e5ec] shadow-none border-0">
       <CardContent className="pt-6">
         <div className="space-y-4">
           {/* Progress indicator */}
           <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
+            <span className="text-[#6b7280]">
               Section {currentSection + 1} of {totalSections}
             </span>
-            <span className="text-muted-foreground">
+            <span className="text-[#6b7280]">
                 {Math.round(progressValue)}% Complete
               </span>
             </div>
-            <Progress value={progressValue} className="w-full" />
+            <div className="bg-[#e0e5ec] [box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)] rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-blue-400 to-blue-500 h-full rounded-full [box-shadow:2px_2px_4px_0px_rgba(59,130,246,0.5)]"
+                style={{ width: `${progressValue}%` }}
+              />
+            </div>
           </div>
 
           {/* Navigation buttons */}
           <div className="flex justify-between items-center">
             {/* Previous button */}
-            <Button
-              variant="outline"
+            <button
               onClick={handlePrevious}
               disabled={isFirstSection}
+              className={`px-4 py-2 text-sm font-medium flex items-center bg-[#e0e5ec] border-0 text-[#353535] rounded-xl transition-all ${
+                isFirstSection
+                  ? 'opacity-50 cursor-not-allowed'
+                  : '[box-shadow:5px_5px_10px_0px_#a3b1c6,-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)]'
+              }`}
             >
               <ChevronLeft className="h-4 w-4 mr-2" />
               Previous
-            </Button>
+            </button>
 
             {/* Action buttons */}
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
+              <button
                 onClick={handleExport}
                 disabled={isExporting}
+                className={`px-4 py-2 text-sm font-medium flex items-center bg-[#e0e5ec] border-0 text-[#353535] rounded-xl transition-all ${
+                  isExporting
+                    ? 'opacity-50 cursor-not-allowed'
+                    : '[box-shadow:5px_5px_10px_0px_#a3b1c6,-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)]'
+                }`}
               >
                 {isExporting ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
@@ -280,41 +304,73 @@ export function DynamicFormNavigation({
                   <Download className="h-4 w-4 mr-2" />
                 )}
                 {isExporting ? 'Preparing...' : 'Export PDF'}
-              </Button>
+              </button>
               {/* Next/Save Draft/Submit based on section */}
               {!isLastSection ? (
                 <>
-                  <Button variant="outline" onClick={handleSaveDraft} disabled={isSavingDraft}>
+                  <button
+                    onClick={handleSaveDraft}
+                    disabled={isSavingDraft}
+                    className={`px-4 py-2 text-sm font-medium flex items-center bg-[#e0e5ec] border-0 text-[#353535] rounded-xl transition-all ${
+                      isSavingDraft
+                        ? 'opacity-50 cursor-not-allowed'
+                        : '[box-shadow:5px_5px_10px_0px_#a3b1c6,-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)]'
+                    }`}
+                  >
                     {isSavingDraft ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
                     ) : (
                       <Save className="h-4 w-4 mr-2" />
                     )}
                     {isSavingDraft ? 'Saving...' : 'Save Draft'}
-                  </Button>
-                  <Button onClick={handleNext} disabled={isSubmitting || isSavingDraft}>
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    disabled={isSubmitting || isSavingDraft}
+                    className={`px-4 py-2 text-sm font-medium flex items-center bg-[#e0e5ec] border-0 text-[#353535] rounded-xl transition-all ${
+                      isSubmitting || isSavingDraft
+                        ? 'opacity-50 cursor-not-allowed'
+                        : '[box-shadow:5px_5px_10px_0px_#a3b1c6,-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)]'
+                    }`}
+                  >
                     Next
                     <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  </button>
                 </>
               ) : (
                 <>
-                  <Button variant="outline" onClick={handleSaveDraft} disabled={isSavingDraft || isSubmitting}>
+                  <button
+                    onClick={handleSaveDraft}
+                    disabled={isSavingDraft || isSubmitting}
+                    className={`px-4 py-2 text-sm font-medium flex items-center bg-[#e0e5ec] border-0 text-[#353535] rounded-xl transition-all ${
+                      isSavingDraft || isSubmitting
+                        ? 'opacity-50 cursor-not-allowed'
+                        : '[box-shadow:5px_5px_10px_0px_#a3b1c6,-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)]'
+                    }`}
+                  >
                     {isSavingDraft ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
                     ) : (
                       <Save className="h-4 w-4 mr-2" />
                     )}
                     {isSavingDraft ? 'Saving...' : 'Save Draft'}
-                  </Button>
-                  <Button onClick={handleSubmit} disabled={isSubmitting || isSavingDraft}>
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || isSavingDraft}
+                    className={`px-4 py-2 text-sm font-medium flex items-center bg-[#e0e5ec] border-0 text-[#353535] rounded-xl transition-all ${
+                      isSubmitting || isSavingDraft
+                        ? 'opacity-50 cursor-not-allowed'
+                        : '[box-shadow:5px_5px_10px_0px_#a3b1c6,-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)]'
+                    }`}
+                  >
                     {isSubmitting ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
                     ) : (
                       <Send className="h-4 w-4 mr-2" />
                     )}
                     {isSubmitting ? 'Submitting...' : 'Submit Form'}
-                  </Button>
+                  </button>
                 </>
               )}
             </div>
