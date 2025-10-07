@@ -1,0 +1,4 @@
+[submodule "tech-triage-platform"]
+	path = tech-triage-platform
+	url = https://github.com/matt-wortman/junk-triage.git
+	branch = phase3-database-driven-form
