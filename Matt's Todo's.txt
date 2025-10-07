@@ -1,5 +1,0 @@
-Matt's Todo's
-    field validation
-    synthetic data
-    Azure implementation guide
-    

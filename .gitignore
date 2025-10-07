@@ -45,3 +45,19 @@ next-env.d.ts
 
 # Design mockup directory (separate project)
 ../triage-design-mockup
+
+# AI/Session files
+.mcp.json
+
+# Working documents
+codexResponseToCodeReview.md
+scrolling*.txt
+Matt's*.txt
+STATUS-*.md
+history/
+
+# Environment backups
+.env.backup*
+
+# Local dev configs
+Caddyfile.dev
