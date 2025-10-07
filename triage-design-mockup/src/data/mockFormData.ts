@@ -6,7 +6,7 @@ export interface FormField {
   label: string;
   helpText?: string;
   placeholder?: string;
-  type: 'text' | 'textarea' | 'date' | 'select' | 'table' | 'scoring' | 'checkbox' | 'radio';
+  type: 'text' | 'textarea' | 'date' | 'select' | 'table' | 'scoring' | 'checkbox' | 'radio' | 'stakeholders';
   required?: boolean;
   options?: string[];
   scoringMin?: number;
@@ -85,6 +85,13 @@ export const mockFormTemplate = {
             "Therapeutic",
             "Research Tool",
           ],
+        },
+        {
+          id: "stakeholders",
+          label: "Stakeholders",
+          helpText: "Select all populations or groups that will be impacted by the invention",
+          type: "stakeholders" as const,
+          required: false,
         },
       ],
     },

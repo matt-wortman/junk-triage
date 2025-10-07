@@ -2,6 +2,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Progress } from './ui/progress';
 import { ChevronLeft, ChevronRight, Download, Save, Send } from 'lucide-react';
+import type { Theme } from '../themes';
 
 interface NavigationProps {
   currentSection: number;
@@ -13,6 +14,7 @@ interface NavigationProps {
   onSaveDraft?: () => void;
   onSubmit?: () => void;
   onExport?: () => void;
+  theme?: Theme;
 }
 
 export function Navigation({
@@ -25,67 +27,91 @@ export function Navigation({
   onSaveDraft,
   onSubmit,
   onExport,
+  theme,
 }: NavigationProps) {
   const progressValue = ((currentSection + 1) / totalSections) * 100;
+  const isNeumorphism = theme?.id === 'neumorphism';
+
+  const NavButton = ({ children, onClick, disabled, variant = 'outline' }: any) => {
+    if (isNeumorphism) {
+      const baseClass = theme?.button?.[variant === 'outline' ? 'outlineClass' : 'primaryClass'] || '';
+      return (
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          className={`px-4 py-2 text-sm font-medium flex items-center ${baseClass} ${disabled ? theme?.button?.disabledClass : ''}`}
+        >
+          {children}
+        </button>
+      );
+    }
+    return (
+      <Button variant={variant} onClick={onClick} disabled={disabled}>
+        {children}
+      </Button>
+    );
+  };
 
   return (
-    <Card>
+    <Card className={isNeumorphism ? 'bg-[#e0e5ec] shadow-none border-0' : ''}>
       <CardContent className="pt-6">
         <div className="space-y-4">
           {/* Progress indicator */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
+              <span className={isNeumorphism ? 'text-[#6b7280]' : 'text-muted-foreground'}>
                 Section {currentSection + 1} of {totalSections}
               </span>
-              <span className="text-muted-foreground">
+              <span className={isNeumorphism ? 'text-[#6b7280]' : 'text-muted-foreground'}>
                 {Math.round(progressValue)}% Complete
               </span>
             </div>
-            <Progress value={progressValue} className="w-full" />
+            {isNeumorphism && theme?.progress ? (
+              <div className={theme.progress.containerClass}>
+                <div className={theme.progress.barClass} style={{ width: `${progressValue}%` }} />
+              </div>
+            ) : (
+              <Progress value={progressValue} className="w-full" />
+            )}
           </div>
 
           {/* Navigation buttons */}
           <div className="flex justify-between items-center">
             {/* Previous button */}
-            <Button
-              variant="outline"
-              onClick={onPrevious}
-              disabled={isFirstSection}
-            >
+            <NavButton onClick={onPrevious} disabled={isFirstSection}>
               <ChevronLeft className="h-4 w-4 mr-2" />
               Previous
-            </Button>
+            </NavButton>
 
             {/* Action buttons */}
             <div className="flex space-x-2">
-              <Button variant="outline" onClick={onExport}>
+              <NavButton onClick={onExport}>
                 <Download className="h-4 w-4 mr-2" />
                 Export PDF
-              </Button>
+              </NavButton>
 
               {/* Next/Save Draft/Submit based on section */}
               {!isLastSection ? (
                 <>
-                  <Button variant="outline" onClick={onSaveDraft}>
+                  <NavButton onClick={onSaveDraft}>
                     <Save className="h-4 w-4 mr-2" />
                     Save Draft
-                  </Button>
-                  <Button onClick={onNext}>
+                  </NavButton>
+                  <NavButton onClick={onNext} variant="default">
                     Next
                     <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
+                  </NavButton>
                 </>
               ) : (
                 <>
-                  <Button variant="outline" onClick={onSaveDraft}>
+                  <NavButton onClick={onSaveDraft}>
                     <Save className="h-4 w-4 mr-2" />
                     Save Draft
-                  </Button>
-                  <Button onClick={onSubmit}>
+                  </NavButton>
+                  <NavButton onClick={onSubmit} variant="default">
                     <Send className="h-4 w-4 mr-2" />
                     Submit Form
-                  </Button>
+                  </NavButton>
                 </>
               )}
             </div>

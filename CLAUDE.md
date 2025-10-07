@@ -2,6 +2,52 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚨 CRITICAL RULE: DESIGN MOCKUP WORKFLOW 🚨
+
+**NEVER EDIT THE PRODUCTION SITE (`../tech-triage-platform/`) FOR DESIGN EXPERIMENTS**
+
+### Design Mockup Directory Purpose
+The `triage-design-mockup` directory exists SOLELY for design and styling experiments. When working in this directory:
+
+1. **DO NOT** make changes to production files in `../tech-triage-platform/`
+2. **DO** recreate production pages in the mockup directory for experimentation
+3. **DO** test all design changes in the mockup environment first
+4. **ONLY** copy approved designs back to production when explicitly requested
+
+### Workflow Example
+```
+User: "Look at http://localhost:3000/ and make it more modern"
+
+WRONG ❌: Edit ../tech-triage-platform/src/app/page.tsx directly
+RIGHT ✅:
+  1. Recreate page.tsx in triage-design-mockup/src/
+  2. Experiment with designs in mockup
+  3. Show user results at localhost:5173
+  4. Wait for approval before copying to production
+```
+
+**If you are working in the triage-design-mockup directory, you are ONLY doing design/styling experiments. Period.**
+
+## 🚨 CRITICAL: Port 5173 ONLY 🚨
+
+**The triage-design-mockup dev server MUST run on port 5173**
+
+- **ALWAYS** ensure the dev server runs on port 5173
+- **NEVER** use port 5174 or any other port
+- If port 5173 is in use, kill the existing process first: `lsof -ti:5173 | xargs kill -9`
+- All navigation, testing, and development should reference http://localhost:5173
+- This ensures consistency and prevents confusion with multiple dev servers
+
+## Repository Information
+
+**GitHub Repository:** https://github.com/matt-wortman/junk-triage.git
+
+**Remote Configuration:**
+```bash
+git remote add origin https://github.com/matt-wortman/junk-triage.git
+git push -u origin master
+```
+
 ## Project Overview
 
 This is a web application project to replicate the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage form as a modern web form connected to a database. The original form is available as `Triage.pdf` in the project root.

@@ -16,6 +16,34 @@ export interface Theme {
     backgroundColor?: string;
   };
 
+  // Page background
+  pageBackground?: string;
+
+  // Navigation bar styling
+  navbar?: {
+    background: string;
+    border: string;
+    shadow: string;
+  };
+
+  // Button styling
+  button?: {
+    primaryClass: string;
+    outlineClass: string;
+    disabledClass?: string;
+  };
+
+  // Select/dropdown styling
+  select?: {
+    className: string;
+  };
+
+  // Progress bar styling
+  progress?: {
+    containerClass: string;
+    barClass: string;
+  };
+
   // Section styling
   section: {
     background: string;
@@ -54,6 +82,7 @@ export interface Theme {
   input: {
     textareaRows: number;
     textareaResize: string;
+    className?: string;  // Optional className for inputs (border, shadow overrides)
   };
 }
 
@@ -61,19 +90,10 @@ export const themes: Record<string, Theme> = {
   theme1: {
     id: 'theme1',
     name: 'Clean & Professional',
-    description: 'Light gray with clean shadows and subtle vortex background',
-
-    background: {
-      type: 'vortex',
-      particleCount: 700,
-      baseHue: 120, // bright green
-      baseSpeed: 0.5,
-      rangeSpeed: 2.0,
-      backgroundColor: '#000000', // black to see particles clearly
-    },
+    description: 'Light gray with clean shadows',
 
     section: {
-      background: 'bg-white/90',
+      background: 'bg-gray-100',
       borderRadius: 'rounded-xl',
       shadow: 'shadow-md',
       border: 'border-0',
@@ -271,6 +291,76 @@ export const themes: Record<string, Theme> = {
       textareaResize: 'resize-y',
     },
   },
+
+  neumorphism: {
+    id: 'neumorphism',
+    name: 'Neumorphism',
+    description: 'Soft UI design with subtle 3D effects - modern and tactile',
+
+    background: {
+      type: 'none',
+      backgroundColor: '#e0e5ec',
+    },
+
+    pageBackground: 'bg-[#e0e5ec]',
+
+    navbar: {
+      background: 'bg-[#e0e5ec]',
+      border: 'border-0',
+      shadow: 'shadow-none',
+    },
+
+    button: {
+      primaryClass: 'bg-[#e0e5ec] [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,_-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),_inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)] border-0 text-[#353535] rounded-xl transition-all',
+      outlineClass: 'bg-[#e0e5ec] [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)] hover:[box-shadow:3px_3px_6px_0px_#a3b1c6,_-3px_-3px_6px_0px_rgba(255,255,255,0.6)] active:[box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),_inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)] border-0 text-[#353535] rounded-xl transition-all',
+      disabledClass: 'opacity-50 cursor-not-allowed',
+    },
+
+    select: {
+      className: 'bg-[#e0e5ec] [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)] border-0 text-[#353535] rounded-xl focus:outline-none focus:ring-0',
+    },
+
+    progress: {
+      containerClass: 'bg-[#e0e5ec] [box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),_inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)] rounded-full h-2',
+      barClass: 'bg-gradient-to-r from-blue-400 to-blue-500 h-full rounded-full [box-shadow:2px_2px_4px_0px_rgba(59,130,246,0.5)]',
+    },
+
+    section: {
+      background: 'bg-[#e0e5ec]',
+      borderRadius: 'rounded-3xl',
+      shadow: 'shadow-none',
+      border: 'border-0',
+      overflow: '',
+    },
+
+    sectionHeader: {
+      background: '',
+      titleSize: 'text-2xl',
+      titleColor: 'text-[#353535]',
+      descriptionSize: 'text-sm',
+      descriptionColor: 'text-[#6b7280]',
+    },
+
+    questionCard: {
+      background: 'bg-white',
+      border: 'border-0',
+      shadow: '[box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)]',
+      borderRadius: 'rounded-2xl',
+    },
+
+    questionLabel: {
+      size: 'text-base',
+      weight: 'font-medium',
+      color: 'text-[#353535]',
+      asteriskMargin: '',
+    },
+
+    input: {
+      textareaRows: 6,
+      textareaResize: 'resize-y',
+      className: 'border-0 shadow-none bg-[#f0f4f8] [box-shadow:inset_3px_3px_6px_0px_rgba(163,177,198,0.4),_inset_-3px_-3px_6px_0px_rgba(255,255,255,0.6)] rounded-xl focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-[#6b7280] text-[#353535]',
+    },
+  },
 };
 
 // Helper function to get theme classes as a string
@@ -284,3 +374,8 @@ export function getThemeClasses(theme: Theme, element: keyof Theme): string {
 
 // Default theme
 export const defaultTheme = themes.theme1;
+
+// Enable HMR for theme changes
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}
