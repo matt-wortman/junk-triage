@@ -1,0 +1,35 @@
+# AI Agent artifacts
+.playwright-mcp/
+.claude/
+.superdesign/
+.vscode/
+
+# Design mockup (separate experiment project)
+triage-design-mockup/
+
+# Working/session files
+*.log
+Screenshot*.png
+
+# Planning/analysis documents
+claudeAdminPageOptions.md
+claudeDocPlan.md
+claudeFormCreator.md
+codeMasterReport.md
+codex-review.md
+codexDocPlan.md
+formBuilderImplementationPlan.md
+formBuilderScopeQandA.md
+DOCUMENTATION_CLEANUP_PLAN.md
+ENVIRONMENT_MODES.md
+MVP_status.md
+agent-specs/
+old_files/
+styles/
+
+# PDFs (except source_material which is tracked)
+/*.pdf
+/*.png
+/*.jpg
+!source_material/*.pdf
+!source_material/*.jpg

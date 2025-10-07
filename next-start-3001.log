@@ -1,7 +1,0 @@
-   ▲ Next.js 15.5.3
-   - Local:        http://localhost:3001
-   - Network:      http://10.255.255.254:3001
-
- ✓ Starting...
- ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
- ✓ Ready in 702ms
