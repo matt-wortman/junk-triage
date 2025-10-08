@@ -240,3 +240,14 @@ model CalculatedScore {
 
   @@map("calculated_scores")
 }
+
+model Feedback {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  pageUrl     String
+  message     String
+  contactInfo String?
+  userId      String?
+  userAgent   String?
+}
