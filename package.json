@@ -17,6 +17,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "studio": "tsx scripts/run-prisma-studio-dev.ts",
+    "studio:azure": "tsx scripts/run-prisma-studio-azure.ts",
     "db:seed": "tsx prisma/seed/index.ts",
     "db:seed:dev": "dotenv -e .env.prisma-dev -- tsx prisma/seed/index.ts"
   },

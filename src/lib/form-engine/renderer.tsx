@@ -367,7 +367,7 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
     }
 
     return (
-      <div className={className}>
+      <div className={className} data-field-code={question.fieldCode}>
         <FieldComponent
           question={question}
           value={value as string | number | boolean | string[] | Record<string, unknown> | Record<string, unknown>[]}
@@ -380,7 +380,10 @@ function DynamicQuestion({ question, className = '' }: DynamicQuestionProps) {
   }
 
   return (
-    <Card className={`bg-white border-0 [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)] rounded-2xl ${className}`}>
+    <Card
+      data-field-code={question.fieldCode}
+      className={`bg-white border-0 [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)] rounded-2xl ${className}`}
+    >
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="space-y-2">

@@ -3,6 +3,7 @@ import { Nunito_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import '@/lib/logger';
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 
 const nunitoSans = Nunito_Sans({
   variable: "--font-nunito-sans",
@@ -25,6 +26,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${nunitoSans.variable} antialiased`}>
         {children}
+        <FeedbackWidget />
         <Toaster />
       </body>
     </html>

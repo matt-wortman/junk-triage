@@ -72,6 +72,15 @@ exit
 (Or run from your machine after adding a temporary firewall rule.)
 
 ### 2.3 Prisma Studio against Azure
+
+Quick launch from your machine:
+```bash
+echo "AZURE_DATABASE_URL=postgresql://triageadmin:...@techtriage-pgflex.postgres.database.azure.com:5432/triage_db?sslmode=require" > .env.azure.local
+npm run studio:azure
+```
+- The script loads `.env.azure.local` (or `.env.azure`) and sets `DATABASE_URL` automatically.
+- Remove `.env.azure.local` from version control (already git-ignored) and rotate the password if it ever leaks.
+
 Option A: Temporary firewall rule
 ```bash
 MY_IP=$(curl -s ifconfig.me)

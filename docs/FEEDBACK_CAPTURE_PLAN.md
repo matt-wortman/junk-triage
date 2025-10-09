@@ -62,3 +62,4 @@ Goal: Let users quickly submit qualitative feedback from any page in the Tech Tr
 | 2025-10-08 | Added Prisma `Feedback` model and migration | ✅ Completed | Migration `20251008200841_add_feedback_model` generated via Prisma. |
 | 2025-10-08 | Implemented `/api/feedback` endpoint with validation | ✅ Completed | Zod schema added; route stores feedback with metadata. |
 | 2025-10-08 | Built feedback widget UI and Jest validation tests | ✅ Completed | Floating dialog with textarea/input, integrates with API and reuses existing styling. |
+| 2025-10-09 | Rotated Azure Postgres admin password and refreshed tooling | ✅ Completed | Updated App Service `DATABASE_URL`/`PRISMA_MIGRATE_DATABASE_URL`, regenerated `.env.azurestudio.local`, and documented connection string in `matts_cheatsheet.md`. |

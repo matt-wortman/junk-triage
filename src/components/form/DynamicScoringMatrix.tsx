@@ -131,19 +131,7 @@ export function DynamicScoringMatrix({ question, error }: DynamicScoringMatrixPr
   }, [responses, calculatedScores.marketScore]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <label className="text-sm font-medium">
-          {question.label}
-        </label>
-        {question.helpText && (
-          <p className="text-sm text-gray-600 mt-1">{question.helpText}</p>
-        )}
-        <p className="text-sm text-muted-foreground mt-1">
-          Automatically calculated scoring matrix based on all criteria entries. The overall Market score is calculated based on market sub-criteria.
-        </p>
-      </div>
-
+    <div className="space-y-6" data-question-code={question.fieldCode}>
       {/* Scoring Table */}
       <Card>
         <CardHeader>
@@ -247,7 +235,7 @@ export function DynamicScoringMatrix({ question, error }: DynamicScoringMatrixPr
           <CardTitle className="text-base">Impact vs Value Matrix</CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="relative bg-gray-50 p-8 rounded-lg">
+          <div className="relative bg-gray-50 px-10 py-8 rounded-lg">
             {/* Matrix Grid */}
             <div className="relative w-full h-64 border-2 border-gray-300">
               {/* Grid lines */}
@@ -279,20 +267,20 @@ export function DynamicScoringMatrix({ question, error }: DynamicScoringMatrixPr
               )}
 
               {/* Axis Labels */}
-              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-sm font-medium">
+              <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 text-sm font-medium tracking-wide">
                 IMPACT
               </div>
-              <div className="absolute -left-8 top-1/2 transform -translate-y-1/2 -rotate-90 text-sm font-medium">
+              <div className="absolute -left-14 top-1/2 transform -translate-y-1/2 -rotate-90 text-sm font-medium tracking-wide">
                 VALUE
               </div>
 
               {/* Scale Labels */}
-              <div className="absolute -bottom-6 left-0 text-xs text-gray-500">0</div>
+              <div className="absolute -bottom-6 left-2 text-xs text-gray-500">0</div>
               <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-500">1.5</div>
-              <div className="absolute -bottom-6 right-0 text-xs text-gray-500">3</div>
-              <div className="absolute -left-6 bottom-0 text-xs text-gray-500">0</div>
+              <div className="absolute -bottom-6 right-2 text-xs text-gray-500">3</div>
+              <div className="absolute -left-6 bottom-2 text-xs text-gray-500">0</div>
               <div className="absolute -left-6 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">1.5</div>
-              <div className="absolute -left-6 top-0 text-xs text-gray-500">3</div>
+              <div className="absolute -left-6 top-2 text-xs text-gray-500">3</div>
             </div>
           </div>
 

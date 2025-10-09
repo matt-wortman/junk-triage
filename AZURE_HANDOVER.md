@@ -85,7 +85,7 @@ export NEXTAUTH_SECRET="<32+ char random>"
 
 ## 5. Application Settings & Secrets
 Current App Service settings (`az webapp config appsettings list ...`):
-- `DATABASE_URL` and `PRISMA_MIGRATE_DATABASE_URL`: `postgresql://triageadmin:***@techtriage-pgflex.postgres.database.azure.com:5432/triage_db?sslmode=require`
+- `DATABASE_URL` and `PRISMA_MIGRATE_DATABASE_URL`: `postgresql://triageadmin:}x-6pe]KNf44y~@techtriage-pgflex.postgres.database.azure.com:5432/triage_db?sslmode=require`
 - `NEXTAUTH_URL`: `https://tech-triage-app.azurewebsites.net`
 - `NEXTAUTH_SECRET`: generated string; rotate via script or portal.
 - `RUN_PRISMA_SEED`: `false` (set to `true` only for one-time seeding).
@@ -105,7 +105,7 @@ Current App Service settings (`az webapp config appsettings list ...`):
 
 ### Connecting locally
 ```bash
-psql "postgresql://triageadmin:<password>@techtriage-pgflex.postgres.database.azure.com:5432/postgres?sslmode=require"
+psql "postgresql://triageadmin:}x-6pe]KNf44y~@techtriage-pgflex.postgres.database.azure.com:5432/postgres?sslmode=require"
 ```
 
 ### Seeding behavior

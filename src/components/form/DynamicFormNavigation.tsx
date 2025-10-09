@@ -1,7 +1,5 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { ChevronLeft, ChevronRight, Download, Save, Send } from 'lucide-react';
 import { useFormEngine } from '@/lib/form-engine/renderer';
 import { shouldShowField, shouldRequireField, parseConditionalConfig } from '@/lib/form-engine/conditional-logic';
@@ -11,6 +9,8 @@ import { toast } from 'sonner';
 import { getClientLogger } from '@/lib/session';
 
 type SubmissionStatusValue = 'DRAFT' | 'SUBMITTED' | 'REVIEWED' | 'ARCHIVED';
+
+const AUTOSAVE_DELAY_MS = 4000;
 
 interface DynamicFormNavigationProps {
   onSaveDraft?: (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => void;
@@ -43,8 +43,135 @@ export function DynamicFormNavigation({
   } = useFormEngine();
 
   const [isExporting, setIsExporting] = useState(false);
+  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastAutosaveAt, setLastAutosaveAt] = useState<Date | null>(null);
 
-  if (!template) return null;
+  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedSnapshotRef = useRef<string>('');
+  const latestDataRef = useRef<{
+    responses: Record<string, unknown>;
+    repeatGroups: Record<string, unknown>;
+    calculatedScores: unknown;
+  } | null>(null);
+  const hasInitializedSnapshotRef = useRef(false);
+  const lastAutosaveErrorRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    latestDataRef.current = {
+      responses,
+      repeatGroups,
+      calculatedScores,
+    };
+  }, [responses, repeatGroups, calculatedScores]);
+
+  useEffect(() => {
+    if (!hasInitializedSnapshotRef.current && latestDataRef.current) {
+      lastSavedSnapshotRef.current = JSON.stringify({
+        responses: latestDataRef.current.responses,
+        repeatGroups: latestDataRef.current.repeatGroups,
+        calculatedScores: latestDataRef.current.calculatedScores,
+      });
+      hasInitializedSnapshotRef.current = true;
+    }
+  }, [responses, repeatGroups, calculatedScores]);
+
+  useEffect(() => {
+    if (!onSaveDraft) {
+      return;
+    }
+
+    if (!hasInitializedSnapshotRef.current || !latestDataRef.current) {
+      return;
+    }
+
+    if (isSavingDraft || isSubmitting) {
+      return;
+    }
+
+    const currentSnapshot = JSON.stringify({
+      responses: latestDataRef.current.responses,
+      repeatGroups: latestDataRef.current.repeatGroups,
+      calculatedScores: latestDataRef.current.calculatedScores,
+    });
+
+    if (currentSnapshot === lastSavedSnapshotRef.current) {
+      return;
+    }
+
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    autosaveTimerRef.current = setTimeout(async () => {
+      if (!onSaveDraft || !latestDataRef.current) {
+        return;
+      }
+
+      setAutosaveStatus('saving');
+      try {
+        await Promise.resolve(
+          onSaveDraft({
+            responses: latestDataRef.current.responses,
+            repeatGroups: latestDataRef.current.repeatGroups,
+            calculatedScores: latestDataRef.current.calculatedScores,
+          })
+        );
+        lastSavedSnapshotRef.current = JSON.stringify({
+          responses: latestDataRef.current.responses,
+          repeatGroups: latestDataRef.current.repeatGroups,
+          calculatedScores: latestDataRef.current.calculatedScores,
+        });
+        setLastAutosaveAt(new Date());
+        setAutosaveStatus('saved');
+        lastAutosaveErrorRef.current = null;
+      } catch (error) {
+        getClientLogger().error('Autosave failed', error);
+        setAutosaveStatus('error');
+        const now = Date.now();
+        if (!lastAutosaveErrorRef.current || now - lastAutosaveErrorRef.current > 30000) {
+          toast.error('Autosave failed. Please check your connection.');
+          lastAutosaveErrorRef.current = now;
+        }
+      } finally {
+        autosaveTimerRef.current = null;
+      }
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [responses, repeatGroups, calculatedScores, isSavingDraft, isSubmitting, onSaveDraft]);
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  const autosaveMessage = useMemo(() => {
+    switch (autosaveStatus) {
+      case 'saving':
+        return 'Auto-saving…';
+      case 'saved':
+        return lastAutosaveAt
+          ? `Last saved at ${lastAutosaveAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+          : 'Saved';
+      case 'error':
+        return 'Autosave failed. Changes may not be saved.';
+      default:
+        return '';
+    }
+  }, [autosaveStatus, lastAutosaveAt]);
+
+  if (!template) {
+    return null;
+  }
 
   const totalSections = template.sections.length;
   const isFirstSection = currentSection === 0;
@@ -111,6 +238,29 @@ export function DynamicFormNavigation({
   // Always allow section navigation even when required fields are missing; final submission still validates.
   const skipSectionValidation = true;
 
+  const scrollToField = (fieldCode: string) => {
+    if (typeof document === 'undefined') return;
+
+    const escapedCode = typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+      ? CSS.escape(fieldCode)
+      : fieldCode.replace(/"/g, '\\"');
+
+    const container = document.querySelector<HTMLElement>(`[data-field-code="${escapedCode}"]`);
+    if (!container) {
+      return;
+    }
+
+    container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    const focusable = container.querySelector<HTMLElement>(
+      'input, textarea, select, [role="combobox"], [contenteditable="true"], button, [tabindex]:not([tabindex="-1"])'
+    );
+
+    if (focusable) {
+      focusable.focus();
+    }
+  };
+
   const handleNext = () => {
     if (isLastSection) {
       return;
@@ -136,7 +286,7 @@ export function DynamicFormNavigation({
 
   // ✅ ADD validation function for current section
   const validateSections = (sectionsToValidate: typeof template.sections) => {
-    const errors: { fieldCode: string; message: string }[] = [];
+    const errors: { fieldCode: string; message: string; label: string; sectionTitle: string }[] = [];
 
     sectionsToValidate.forEach((section) => {
       const questions = [...section.questions].sort((a, b) => a.order - b.order);
@@ -175,7 +325,12 @@ export function DynamicFormNavigation({
             }
           }
 
-          errors.push({ fieldCode: question.fieldCode, message: errorMessage });
+          errors.push({
+            fieldCode: question.fieldCode,
+            message: errorMessage,
+            label: question.label,
+            sectionTitle: section.title,
+          });
         }
       }
     });
@@ -207,18 +362,29 @@ export function DynamicFormNavigation({
     }
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     const formData = {
       responses,
       repeatGroups,
       calculatedScores,
     };
 
-    if (onSaveDraft) {
-      getClientLogger().info('Saving draft', { hasResponses: hasResponseValues(responses, repeatGroups) });
-      onSaveDraft(formData);
-    } else {
-      saveDraft();
+    try {
+      setAutosaveStatus('saving');
+      if (onSaveDraft) {
+        getClientLogger().info('Saving draft', { hasResponses: hasResponseValues(responses, repeatGroups) });
+        await Promise.resolve(onSaveDraft(formData));
+      } else {
+        await saveDraft();
+      }
+      lastSavedSnapshotRef.current = JSON.stringify(formData);
+      setLastAutosaveAt(new Date());
+      setAutosaveStatus('saved');
+      lastAutosaveErrorRef.current = null;
+    } catch (error) {
+      getClientLogger().error('Manual draft save failed', error);
+      setAutosaveStatus('error');
+      toast.error('Failed to save draft. Please try again.');
     }
   };
 
@@ -235,7 +401,16 @@ export function DynamicFormNavigation({
       validationResult.errors.forEach((error) => {
         setError(error.fieldCode, error.message);
       });
-      toast.error('Please fill in all required fields before submitting.');
+
+      const primaryError = validationResult.errors[0];
+      if (primaryError) {
+        toast.error(
+          `Please complete "${primaryError.label}" in the "${primaryError.sectionTitle}" section before submitting.`
+        );
+        requestAnimationFrame(() => scrollToField(primaryError.fieldCode));
+      } else {
+        toast.error('Please fill in all required fields before submitting.');
+      }
       return;
     }
 
@@ -269,6 +444,15 @@ export function DynamicFormNavigation({
                 style={{ width: `${progressValue}%` }}
               />
             </div>
+            {autosaveMessage && (
+              <div
+                className={`text-xs ${
+                  autosaveStatus === 'error' ? 'text-red-500' : 'text-[#6b7280]'
+                } text-right`}
+              >
+                {autosaveMessage}
+              </div>
+            )}
           </div>
 
           {/* Navigation buttons */}
