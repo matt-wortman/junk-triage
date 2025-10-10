@@ -16,6 +16,15 @@
 
 ---
 
+## Progress Log
+
+| Date (EST) | Update |
+|------------|--------|
+| 2025-10-09 | Added Technology core tables, stage supplements, audit history, persona/user models, and catalog scaffolding to Prisma schema (migration `20251009162649_technology_foundation`). |
+| 2025-10-09 | Seeded initial question dictionary entries and added `npm run catalog:validate` script to enforce binding paths against registry. |
+
+---
+
 ## 1. Domain Architecture
 
 ### 1.1 Prisma Schema (Core)

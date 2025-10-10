@@ -1,6 +1,7 @@
 import { seedFormStructure } from './form-structure';
 import { seedDemoSubmissions } from './demo-submissions';
 import { getPrismaClient } from './prisma-factory';
+import { seedQuestionDictionary } from './question-dictionary';
 
 const prisma = getPrismaClient();
 
@@ -17,6 +18,10 @@ async function main() {
   }
 
   try {
+    // Seed question dictionary entries (idempotent)
+    console.log('📚 Seeding question dictionary...');
+    await seedQuestionDictionary(prisma);
+
     // Clear existing dynamic form data
     console.log('🧹 Clearing existing dynamic form data...');
     await prisma.formSubmission.deleteMany();
