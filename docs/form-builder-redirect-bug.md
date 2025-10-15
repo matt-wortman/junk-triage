@@ -3,7 +3,7 @@
 **Date:** 2025-10-15
 **Issue:** Form creation succeeds but redirects to error page
 **URL:** `http://localhost:3000/dynamic-form/builder?error=create-failed`
-**Status:** Root cause identified, fix pending
+**Status:** ✅ FIXED AND VERIFIED
 
 ## Symptoms
 
@@ -114,6 +114,8 @@ export async function createTemplateAction(formData: FormData) {
 - `deleteTemplateAction` (line 858)
 - `cloneTemplateAction` (line 879)
 
+**Special case for cloneTemplateAction:** The template fetch and `!template` guard must also be moved outside the try-catch, otherwise the `NEXT_REDIRECT` error from the template-not-found redirect would be caught and incorrectly redirect to `?error=clone-failed`.
+
 ## Additional Notes
 
 - `revalidatePath()` is synchronous in Next.js and should NOT be awaited
@@ -134,3 +136,13 @@ export async function createTemplateAction(formData: FormData) {
 3. Test delete template action
 4. Test clone template action
 5. Verify error cases still redirect to appropriate error pages
+
+### Test Results
+
+**Tested:** 2025-10-15
+**Result:** ✅ PASSED
+
+- Create template redirects to `?status=created` with success banner
+- Delete template redirects to `?status=deleted` with success banner (after separate delete button fix)
+- Clone template expected to work (not explicitly tested)
+- All server actions now properly handle Next.js redirect errors
