@@ -339,7 +339,10 @@ function TemplateCard({ template }: { template: TemplateListItem }) {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <form action={deleteTemplateAction}>
                 <input type="hidden" name="templateId" value={template.id} />
-                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction
+                  type="submit"
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
                   Delete
                 </AlertDialogAction>
               </form>

@@ -205,6 +205,7 @@ export async function getTemplateDetail(templateId: string) {
                 orderBy: { order: 'asc' },
               },
               scoringConfig: true,
+              dictionary: true,
             },
           },
         },
@@ -694,6 +695,7 @@ export async function duplicateField(fieldId: string): Promise<ActionResult> {
         order: nextOrder,
         fieldCode: uniqueCode,
         isRequired: question.isRequired,
+        dictionaryKey: question.dictionaryKey ?? null,
         options: question.options.length
           ? {
               create: question.options.map((option, index) => ({
@@ -835,6 +837,9 @@ export async function createTemplateAction(formData: FormData) {
 
   const { name, description } = parsed.data
 
+  // Track success to avoid catching redirect errors in try-catch
+  let createdSuccessfully = false
+
   try {
     await prisma.formTemplate.create({
       data: {
@@ -845,10 +850,16 @@ export async function createTemplateAction(formData: FormData) {
       },
     })
 
-    await revalidatePath('/dynamic-form/builder')
-    redirect('/dynamic-form/builder?status=created')
+    revalidatePath('/dynamic-form/builder')
+    createdSuccessfully = true
   } catch (error) {
     console.error('Failed to create form template:', error)
+  }
+
+  // Redirect outside try-catch to prevent catching NEXT_REDIRECT errors
+  if (createdSuccessfully) {
+    redirect('/dynamic-form/builder?status=created')
+  } else {
     redirect('/dynamic-form/builder?error=create-failed')
   }
 }
@@ -861,15 +872,24 @@ export async function deleteTemplateAction(formData: FormData) {
     redirect('/dynamic-form/builder?error=missing-template-id')
   }
 
+  // Track success to avoid catching redirect errors in try-catch
+  let deletedSuccessfully = false
+
   try {
     await prisma.formTemplate.delete({
       where: { id: parsed.data },
     })
 
-    await revalidatePath('/dynamic-form/builder')
-    redirect('/dynamic-form/builder?status=deleted')
+    revalidatePath('/dynamic-form/builder')
+    deletedSuccessfully = true
   } catch (error) {
     console.error('Failed to delete form template:', error)
+  }
+
+  // Redirect outside try-catch to prevent catching NEXT_REDIRECT errors
+  if (deletedSuccessfully) {
+    redirect('/dynamic-form/builder?status=deleted')
+  } else {
     redirect('/dynamic-form/builder?error=delete-failed')
   }
 }
@@ -882,26 +902,31 @@ export async function cloneTemplateAction(formData: FormData) {
     redirect('/dynamic-form/builder?error=missing-template-id')
   }
 
-  try {
-    const template = await prisma.formTemplate.findUnique({
-      where: { id: parsed.data },
-      include: {
-        sections: {
-          include: {
-            questions: {
-              include: {
-                options: true,
-                scoringConfig: true,
-              },
+  // Fetch template outside try-catch to handle not-found case properly
+  const template = await prisma.formTemplate.findUnique({
+    where: { id: parsed.data },
+    include: {
+      sections: {
+        include: {
+          questions: {
+            include: {
+              options: true,
+              scoringConfig: true,
             },
           },
         },
       },
-    })
+    },
+  })
 
-    if (!template) {
-      redirect('/dynamic-form/builder?error=template-not-found')
-    }
+  if (!template) {
+    redirect('/dynamic-form/builder?error=template-not-found')
+  }
+
+  // Track success to avoid catching redirect errors in try-catch
+  let clonedSuccessfully = false
+
+  try {
 
     const sortedSections = [...template.sections].sort((a, b) => a.order - b.order)
 
@@ -935,6 +960,7 @@ export async function cloneTemplateAction(formData: FormData) {
                     conditional: question.conditional as Prisma.InputJsonValue | undefined,
                     order: question.order,
                     isRequired: question.isRequired,
+                    dictionaryKey: question.dictionaryKey ?? null,
                     options:
                       sortedOptions.length > 0
                         ? {
@@ -964,10 +990,16 @@ export async function cloneTemplateAction(formData: FormData) {
       },
     })
 
-    await revalidatePath('/dynamic-form/builder')
-    redirect('/dynamic-form/builder?status=cloned')
+    revalidatePath('/dynamic-form/builder')
+    clonedSuccessfully = true
   } catch (error) {
     console.error('Failed to clone form template:', error)
+  }
+
+  // Redirect outside try-catch to prevent catching NEXT_REDIRECT errors
+  if (clonedSuccessfully) {
+    redirect('/dynamic-form/builder?status=cloned')
+  } else {
     redirect('/dynamic-form/builder?error=clone-failed')
   }
 }
