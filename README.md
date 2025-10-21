@@ -1,18 +1,17 @@
 # Technology Triage Platform
 
-A sophisticated web application that digitalizes the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage evaluation process. Built with a modern, database-driven architecture supporting both hardcoded and dynamic form implementations.
+A sophisticated web application that digitalizes the Cincinnati Children's Hospital Medical Center (CCHMC) technology triage evaluation process. Built with a modern, database-driven architecture.
 
-## 📌 Status Snapshot (2025-10-04)
-- Release notes: `docs/release-notes/2025-10-02.md`
-- Latest container: `innovationventures.azurecr.io/tech-triage-platform:prod@sha256:63c43a9dfdadba3b277ff93299e3395532d3a156e9f40f03dd45de0bf87ff53b`
-- Azure Web App `tech-triage-app` restarted 2025-10-04 after incremental update; `/api/health` confirms database connectivity
-- Azure deployment runbooks now capture both incremental pushes and full reprovisioning (see “☁️ Azure Deployment Overview”)
-- Dynamic form exports **print-ready PDFs** (report layout + scoring graphics) via `/api/form-exports`
-- Builder now supports **Data Table configuration** (column definitions + min/max row limits stored in Prisma `repeatableConfig`)
-- Dropdown option slugs normalize with underscores and show labeled, read-only database keys
-- New `npm run dev:logs` / `npm run prisma:dev:logs` commands mirror server output into timestamped files under `logs/`
-- Secrets still live in App Service configuration; Key Vault retrieval currently blocked by RBAC—set env vars manually before running `scripts/deploy-to-azure.sh`
-- Upcoming work: migrate secrets to Key Vault, restrict Postgres firewall, add CI/CD release automation, expand PDF styling, and add builder integration tests
+## 📌 Current Status
+
+**For complete project status, roadmap, and metrics:** See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+
+**Quick Facts:**
+- ✅ Live at: https://tech-triage-app.azurewebsites.net
+- ✅ Database-driven dynamic forms with builder interface
+- ✅ PDF export with scoring graphics
+- ✅ Azure PostgreSQL + App Service deployment
+- ✅ Automated export pipeline (Windows task every 48h)
 
 ## 🚀 Quick Start
 

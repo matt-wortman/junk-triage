@@ -35,6 +35,8 @@ export type FormQuestionSeed = {
   conditional?: QuestionConditionalSeed;
   options?: QuestionOptionSeed[];
   scoringConfig?: QuestionScoringConfigSeed;
+  dictionaryKey?: string;
+  repeatableConfig?: Record<string, unknown>;
 };
 
 export type FormSectionSeed = {

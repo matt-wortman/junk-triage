@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "binary"
 }
 
 datasource db {
@@ -165,12 +166,15 @@ model FormQuestion {
   repeatableConfig Json? // Configuration for repeatable/data table fields
   order            Int
   isRequired       Boolean   @default(false)
+  dictionaryKey    String?
 
   section       FormSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   options       QuestionOption[]
   scoringConfig ScoringConfig?
+  dictionary    QuestionDictionary? @relation(fields: [dictionaryKey], references: [key], onDelete: SetNull)
 
   @@map("form_questions")
+  @@index([dictionaryKey])
 }
 
 enum FieldType {
@@ -447,6 +451,7 @@ model QuestionDictionary {
   dataSource  DataSource
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  formQuestions FormQuestion[]
 
   @@index([version])
   @@map("question_dictionary")

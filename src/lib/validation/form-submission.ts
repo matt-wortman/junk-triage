@@ -12,6 +12,15 @@ const jsonValueSchema: z.ZodType<Prisma.JsonValue> = z.lazy(() =>
   ])
 );
 
+const rowVersionSchema = z
+  .object({
+    technologyRowVersion: z.number().int().nonnegative().optional(),
+    triageStageRowVersion: z.number().int().nonnegative().optional(),
+    viabilityStageRowVersion: z.number().int().nonnegative().optional(),
+  })
+  .partial()
+  .optional();
+
 export const formSubmissionPayloadSchema = z.object({
   templateId: z.string().min(1, 'templateId is required'),
   responses: z.record(z.string(), jsonValueSchema).default({}),
@@ -22,6 +31,7 @@ export const formSubmissionPayloadSchema = z.object({
     .record(z.string(), jsonValueSchema)
     .optional()
     .default({}),
+  rowVersions: rowVersionSchema,
 });
 
 export const formSubmissionRequestSchema = formSubmissionPayloadSchema.extend({

@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
             include: {
               options: { orderBy: { order: 'asc' } },
               scoringConfig: true,
+              dictionary: true,
             },
             orderBy: { order: 'asc' },
           },

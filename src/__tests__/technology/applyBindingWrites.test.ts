@@ -1,0 +1,220 @@
+/**
+ * @jest-environment node
+ */
+import { DataSource } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
+import { applyBindingWrites, BindingMetadata } from '@/lib/technology/service';
+
+const buildBindingMetadata = (
+  overrides: Partial<BindingMetadata> & Pick<BindingMetadata, 'bindingPath'>
+): BindingMetadata => ({
+  fieldCode: overrides.fieldCode ?? overrides.bindingPath,
+  questionId: overrides.questionId ?? `${overrides.bindingPath}-question`,
+  dictionaryKey: overrides.dictionaryKey ?? `${overrides.bindingPath}-key`,
+  dataSource: overrides.dataSource ?? DataSource.TECHNOLOGY,
+  bindingPath: overrides.bindingPath,
+});
+
+describe('applyBindingWrites', () => {
+  const technologyFindUnique = jest.fn();
+  const technologyUpdate = jest.fn();
+  const technologyCreate = jest.fn();
+  const triageStageUpdate = jest.fn();
+  const triageStageCreate = jest.fn();
+  const viabilityStageUpdate = jest.fn();
+  const viabilityStageCreate = jest.fn();
+
+  const mockTx = {
+    technology: {
+      findUnique: technologyFindUnique,
+      update: technologyUpdate,
+      create: technologyCreate,
+    },
+    triageStage: {
+      update: triageStageUpdate,
+      create: triageStageCreate,
+    },
+    viabilityStage: {
+      update: viabilityStageUpdate,
+      create: viabilityStageCreate,
+    },
+  } as unknown as Prisma.TransactionClient;
+
+const baseBindings: Record<string, BindingMetadata> = {
+  tech_id: buildBindingMetadata({
+    fieldCode: 'tech_id',
+    bindingPath: 'technology.techId',
+  }),
+  tech_name: buildBindingMetadata({
+    fieldCode: 'tech_name',
+    bindingPath: 'technology.technologyName',
+  }),
+  overview: buildBindingMetadata({
+    fieldCode: 'overview',
+    bindingPath: 'triageStage.technologyOverview',
+    dataSource: DataSource.STAGE_SUPPLEMENT,
+  }),
+  mission_score: buildBindingMetadata({
+    fieldCode: 'mission_score',
+    bindingPath: 'triageStage.missionAlignmentScore',
+    dataSource: DataSource.STAGE_SUPPLEMENT,
+  }),
+  inventor_name: buildBindingMetadata({
+    fieldCode: 'inventor_name',
+    bindingPath: 'technology.inventorName',
+  }),
+  reviewer_name: buildBindingMetadata({
+    fieldCode: 'reviewer_name',
+    bindingPath: 'technology.reviewerName',
+  }),
+  domain_asset_class: buildBindingMetadata({
+    fieldCode: 'domain_asset_class',
+    bindingPath: 'technology.domainAssetClass',
+  }),
+  feasibility: buildBindingMetadata({
+    fieldCode: 'feasibility',
+    bindingPath: 'viabilityStage.technicalFeasibility',
+    dataSource: DataSource.STAGE_SUPPLEMENT,
+  }),
+};
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('updates existing technology and triage stage fields', async () => {
+    technologyFindUnique.mockResolvedValue({
+      id: 'tech-1',
+      techId: 'D25-0001',
+      triageStage: { id: 'triage-1' },
+      viabilityStage: null,
+    });
+
+    const responses = {
+      tech_id: 'D25-0001',
+      tech_name: 'Smart Patch',
+      overview: 'Updated overview',
+      mission_score: 3,
+    };
+
+    const result = await applyBindingWrites(mockTx, baseBindings, responses, {
+      userId: 'tester',
+    });
+
+    expect(result).toEqual({ technologyId: 'tech-1', techId: 'D25-0001' });
+    expect(technologyUpdate).toHaveBeenCalledWith({
+      where: { id: 'tech-1' },
+      data: expect.objectContaining({
+        technologyName: 'Smart Patch',
+        lastModifiedBy: 'tester',
+        rowVersion: { increment: 1 },
+      }),
+    });
+    expect(triageStageUpdate).toHaveBeenCalledWith({
+      where: { id: 'triage-1' },
+      data: expect.objectContaining({
+        technologyOverview: 'Updated overview',
+        missionAlignmentScore: 3,
+        rowVersion: { increment: 1 },
+      }),
+    });
+    expect(triageStageCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates a technology record when required fields are present', async () => {
+    technologyFindUnique.mockResolvedValue(null);
+    technologyCreate.mockResolvedValue({
+      id: 'tech-2',
+      techId: 'D25-0002',
+      triageStage: null,
+      viabilityStage: null,
+    });
+
+    const responses = {
+      tech_id: 'D25-0002',
+      tech_name: 'Glucose Monitor',
+      overview: 'New tech overview',
+      mission_score: 4,
+      inventor_name: 'Dr. Jane Smith',
+      reviewer_name: 'Alex Johnson',
+      domain_asset_class: 'Digital Health',
+    };
+
+    const result = await applyBindingWrites(mockTx, baseBindings, responses, {
+      userId: 'tester',
+      allowCreateWhenIncomplete: true,
+    });
+
+    expect(result).toEqual({ technologyId: 'tech-2', techId: 'D25-0002' });
+    expect(technologyCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        techId: 'D25-0002',
+        technologyName: 'Glucose Monitor',
+        lastModifiedBy: 'tester',
+      }),
+      include: expect.any(Object),
+    });
+    expect(triageStageCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        technology: { connect: { id: 'tech-2' } },
+        technologyOverview: 'New tech overview',
+      }),
+    });
+  });
+
+  it('returns empty result when techId is missing', async () => {
+    const responses = {
+      tech_name: 'Missing ID',
+      overview: 'No tech id provided',
+    };
+
+    const result = await applyBindingWrites(mockTx, baseBindings, responses, {});
+
+    expect(result).toEqual({});
+    expect(technologyFindUnique).not.toHaveBeenCalled();
+  });
+
+  it('skips create when allowCreateWhenIncomplete=false and required fields missing', async () => {
+    technologyFindUnique.mockResolvedValue(null);
+
+    const responses = {
+      tech_id: 'D25-0003',
+      overview: 'Incomplete create payload',
+    };
+
+    const result = await applyBindingWrites(mockTx, baseBindings, responses, {
+      allowCreateWhenIncomplete: false,
+    });
+
+    expect(result).toEqual({});
+    expect(technologyCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates or updates viability stage values when provided', async () => {
+    technologyFindUnique.mockResolvedValue({
+      id: 'tech-4',
+      techId: 'D25-0004',
+      triageStage: null,
+      viabilityStage: { id: 'viability-1' },
+    });
+
+    const responses = {
+      tech_id: 'D25-0004',
+      tech_name: 'Nano Sensor',
+      feasibility: 'Feasible with further testing',
+    };
+
+    await applyBindingWrites(mockTx, baseBindings, responses, {
+      userId: 'tester',
+    });
+
+    expect(viabilityStageUpdate).toHaveBeenCalledWith({
+      where: { id: 'viability-1' },
+      data: expect.objectContaining({
+        technicalFeasibility: 'Feasible with further testing',
+        rowVersion: { increment: 1 },
+      }),
+    });
+    expect(viabilityStageCreate).not.toHaveBeenCalled();
+  });
+});

@@ -1,25 +1,28 @@
 'use server'
 
-import { randomUUID } from 'crypto'
-
 import { prisma } from '@/lib/prisma'
 import { SubmissionStatus, Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { FormResponse, RepeatableGroupData, FormTemplateWithSections } from '@/lib/form-engine/types'
 import { formSubmissionPayloadSchema } from '@/lib/validation/form-submission'
 import { logger } from '@/lib/logger'
+import { applyBindingWrites, fetchTemplateWithBindingsById } from '@/lib/technology/service'
+import { RowVersionSnapshot } from '@/lib/technology/types'
+import { OptimisticLockError } from '@/lib/technology/types'
 
 export interface FormSubmissionData {
   templateId: string
   responses: Record<string, unknown>
   repeatGroups: Record<string, unknown>
   calculatedScores?: Record<string, unknown>
+  rowVersions?: RowVersionSnapshot
 }
 
 export interface FormSubmissionResult {
   success: boolean
   submissionId?: string
   error?: string
+  rowVersions?: RowVersionSnapshot
 }
 
 
@@ -44,6 +47,9 @@ export async function submitFormResponse(
   try {
     const payload = formSubmissionPayloadSchema.parse(data)
     const resolvedUser = resolveUserId(userId)
+    const { bindingMetadata } = await fetchTemplateWithBindingsById(payload.templateId)
+
+    let latestRowVersions: RowVersionSnapshot | undefined = payload.rowVersions
 
     // Start a database transaction to ensure data consistency
     const result = await prisma.$transaction(async (tx) => {
@@ -81,6 +87,13 @@ export async function submitFormResponse(
           })
 
           await createSubmissionData(tx, submission.id, payload)
+          const bindingResult = await applyBindingWrites(tx, bindingMetadata, payload.responses, {
+            userId: resolvedUser,
+            allowCreateWhenIncomplete: true,
+            expectedVersions: payload.rowVersions,
+          })
+
+          latestRowVersions = bindingResult.rowVersions ?? latestRowVersions
 
           return submission
         }
@@ -97,6 +110,13 @@ export async function submitFormResponse(
       })
 
       await createSubmissionData(tx, submission.id, payload)
+      const bindingResult = await applyBindingWrites(tx, bindingMetadata, payload.responses, {
+        userId: resolvedUser,
+        allowCreateWhenIncomplete: true,
+        expectedVersions: payload.rowVersions,
+      })
+
+      latestRowVersions = bindingResult.rowVersions ?? latestRowVersions
 
       return submission
     })
@@ -108,8 +128,15 @@ export async function submitFormResponse(
     return {
       success: true,
       submissionId: result.id,
+      rowVersions: latestRowVersions,
     }
   } catch (error) {
+    if (error instanceof OptimisticLockError) {
+      return {
+        success: false,
+        error: 'conflict',
+      }
+    }
     logger.error('Error submitting form', error)
 
     return {
@@ -180,7 +207,11 @@ export async function saveDraftResponse(
 ): Promise<FormSubmissionResult> {
   try {
     const payload = formSubmissionPayloadSchema.parse(data)
+    const resolvedUser = resolveUserId(userId)
+    const { bindingMetadata } = await fetchTemplateWithBindingsById(payload.templateId)
     const trimmedUserId = userId && userId.trim().length > 0 ? userId.trim() : undefined
+
+    let latestRowVersions: RowVersionSnapshot | undefined = payload.rowVersions
 
     // Check if we're updating an existing draft
     if (existingDraftId) {
@@ -264,6 +295,14 @@ export async function saveDraftResponse(
           }
         }
 
+        const bindingResult = await applyBindingWrites(tx, bindingMetadata, payload.responses, {
+          userId: resolvedUser,
+          allowCreateWhenIncomplete: false,
+          expectedVersions: payload.rowVersions,
+        })
+
+        latestRowVersions = bindingResult.rowVersions ?? latestRowVersions
+
         return submission
       })
 
@@ -272,6 +311,7 @@ export async function saveDraftResponse(
       return {
         success: true,
         submissionId: result.id,
+        rowVersions: latestRowVersions,
       }
     } else {
       // Create new draft (same logic as submitFormResponse but with DRAFT status)
@@ -279,7 +319,7 @@ export async function saveDraftResponse(
         const submission = await tx.formSubmission.create({
           data: {
             templateId: payload.templateId,
-            submittedBy: trimmedUserId ?? resolveUserId(userId),
+            submittedBy: trimmedUserId ?? resolvedUser,
             status: SubmissionStatus.DRAFT,
           },
         })
@@ -330,6 +370,14 @@ export async function saveDraftResponse(
           }
         }
 
+        const bindingResult = await applyBindingWrites(tx, bindingMetadata, payload.responses, {
+          userId: resolvedUser,
+          allowCreateWhenIncomplete: false,
+          expectedVersions: payload.rowVersions,
+        })
+
+        latestRowVersions = bindingResult.rowVersions ?? latestRowVersions
+
         return submission
       })
 
@@ -338,9 +386,16 @@ export async function saveDraftResponse(
       return {
         success: true,
         submissionId: result.id,
+        rowVersions: latestRowVersions,
       }
     }
   } catch (error) {
+    if (error instanceof OptimisticLockError) {
+      return {
+        success: false,
+        error: 'conflict',
+      }
+    }
     logger.error('Error saving draft', error)
 
     return {

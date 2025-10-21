@@ -15,7 +15,8 @@ echo "✅ Database migrations applied."
 echo "⚡ Generating Prisma client..."
 npx prisma generate
 
-if [ "${RUN_PRISMA_SEED:-true}" = "true" ]; then
+RUN_SEED="${RUN_PRISMA_SEED:-false}"
+if [ "$RUN_SEED" = "true" ]; then
   echo "🌱 Seeding database..."
   if [ "${SEED_DEMO_DATA:-true}" = "true" ]; then
     echo "  📊 Demo data will be included (SEED_DEMO_DATA=true)"
@@ -24,7 +25,8 @@ if [ "${RUN_PRISMA_SEED:-true}" = "true" ]; then
   fi
   npx prisma db seed || echo "⚠️  Prisma seed failed or is not configured"
 else
-  echo "⏭️  Skipping database seed (RUN_PRISMA_SEED=false)"
+  echo "⏭️  Skipping database seed (RUN_PRISMA_SEED=${RUN_SEED})"
+  echo "   Set RUN_PRISMA_SEED=true (and SEED_ALLOW_PURGE=true for destructive resets) to enable seeding."
 fi
 
 echo "🎉 Starting Next.js application..."

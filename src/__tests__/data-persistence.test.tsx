@@ -166,4 +166,35 @@ describe('Data Persistence Bug', () => {
       'Some data in section 2'
     );
   });
+
+  it('retains responses when subsequent initial data is undefined', () => {
+    const initialData = {
+      responses: {
+        basic_name: 'Prefilled Name',
+      } as FormResponse,
+      repeatGroups: {} as RepeatableGroupData,
+    };
+
+    const { rerender } = render(
+      <FormEngineProvider template={mockTemplate} initialData={initialData}>
+        <FormStateDisplay />
+      </FormEngineProvider>
+    );
+
+    const firstRender = JSON.parse(
+      screen.getByTestId('responses').textContent || '{}'
+    );
+    expect(firstRender.basic_name).toBe('Prefilled Name');
+
+    rerender(
+      <FormEngineProvider template={mockTemplate}>
+        <FormStateDisplay />
+      </FormEngineProvider>
+    );
+
+    const secondRender = JSON.parse(
+      screen.getByTestId('responses').textContent || '{}'
+    );
+    expect(secondRender.basic_name).toBe('Prefilled Name');
+  });
 });

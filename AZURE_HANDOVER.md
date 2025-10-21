@@ -85,10 +85,11 @@ export NEXTAUTH_SECRET="<32+ char random>"
 
 ## 5. Application Settings & Secrets
 Current App Service settings (`az webapp config appsettings list ...`):
-- `DATABASE_URL` and `PRISMA_MIGRATE_DATABASE_URL`: `postgresql://triageadmin:}x-6pe]KNf44y~@techtriage-pgflex.postgres.database.azure.com:5432/triage_db?sslmode=require`
+- `DATABASE_URL` and `PRISMA_MIGRATE_DATABASE_URL`: values managed in `tech-triage-platform/.env.export`; load with `source tech-triage-platform/.env.export` before running Azure CLI commands.
 - `NEXTAUTH_URL`: `https://tech-triage-app.azurewebsites.net`
-- `NEXTAUTH_SECRET`: generated string; rotate via script or portal.
-- `RUN_PRISMA_SEED`: `false` (set to `true` only for one-time seeding).
+- `NEXTAUTH_SECRET`: stored alongside other secrets in `.env.export`; rotate via script or portal.
+- `RUN_PRISMA_SEED`: `false` (default; set to `true` only when you intentionally run the seed script).
+- `SEED_ALLOW_PURGE`: `false` (required to be `true` only if you want the seed script to wipe/reload form tables).
 - `SEED_DEMO_DATA`: `false` (flip to `true` to load sample submissions when seeding).
 - `BASIC_AUTH_USERNAME` / `BASIC_AUTH_PASSWORD`: optional shared credentials enforced by middleware; leave blank to disable.
 - `NODE_ENV`: `production`
@@ -105,7 +106,8 @@ Current App Service settings (`az webapp config appsettings list ...`):
 
 ### Connecting locally
 ```bash
-psql "postgresql://triageadmin:}x-6pe]KNf44y~@techtriage-pgflex.postgres.database.azure.com:5432/postgres?sslmode=require"
+source tech-triage-platform/.env.export
+psql "$DATABASE_URL" -c '\l'
 ```
 
 ### Seeding behavior

@@ -22,6 +22,12 @@ const DEFAULT_REPEATABLE_COLUMNS: RepeatableFieldConfig[] = [
 ];
 
 const LEGACY_REPEATABLE_COLUMNS: Record<string, RepeatableFieldConfig[]> = {
+  'F0.5': [
+    { key: 'name', label: 'Name', type: 'text', required: true },
+    { key: 'title', label: 'Title', type: 'text', required: false },
+    { key: 'department', label: 'Department', type: 'text', required: false },
+    { key: 'email', label: 'Email', type: 'text', required: false },
+  ],
   'F4.2.a': [
     { key: 'company', label: 'Company', type: 'text', required: true },
     { key: 'product', label: 'Product or Solution', type: 'text', required: true },

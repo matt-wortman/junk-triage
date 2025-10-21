@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   CalculatedScores,
 } from '@/lib/form-engine/types';
 import { submitFormResponse, saveDraftResponse, loadDraftResponse } from './actions';
+import { RowVersionSnapshot } from '@/lib/technology/types';
 import { getOrCreateSessionId, getClientLogger } from '@/lib/session';
 import { toast } from 'sonner';
 
@@ -28,58 +29,86 @@ function DynamicFormContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(draftId);
-const [initialFormData, setInitialFormData] = useState<{
-  responses: FormResponse;
-  repeatGroups: RepeatableGroupData;
-  calculatedScores: Record<string, unknown>;
-} | null>(null);
+  const [initialFormData, setInitialFormData] = useState<{
+    responses: FormResponse;
+    repeatGroups: RepeatableGroupData;
+    calculatedScores: Record<string, unknown>;
+  } | null>(null);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [rowVersions, setRowVersions] = useState<RowVersionSnapshot | null>(null);
+
+  const techIdParam = searchParams?.get('techId');
+  const techId = techIdParam && techIdParam.trim().length > 0 ? techIdParam.trim() : null;
+
+  const loadTemplateAndDraft = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setIsDraftLoaded(false);
+    setCurrentDraftId(draftId ?? null);
+
+    try {
+      const query = techId ? `?techId=${encodeURIComponent(techId)}` : '';
+      const response = await fetch(`/api/form-templates${query}`);
+      const payload = await response.json();
+
+      if (!response.ok) {
+        const message =
+          (payload && typeof payload.error === 'string' && payload.error) ||
+          'Failed to load form template';
+        throw new Error(message);
+      }
+
+      setTemplate(payload.template);
+
+      const prefilledResponses = (payload.initialResponses ?? {}) as FormResponse;
+      const prefilledRepeatGroups = (payload.initialRepeatGroups ?? {}) as RepeatableGroupData;
+      setRowVersions(payload.rowVersions ?? null);
+
+      if (draftId) {
+        const logger = getClientLogger();
+        logger.info('Loading draft', draftId);
+        const draftResult = await loadDraftResponse(draftId, getOrCreateSessionId());
+
+        if (draftResult.success && draftResult.data) {
+          logger.info('Draft loaded successfully');
+          setInitialFormData({
+            responses: {
+              ...prefilledResponses,
+              ...draftResult.data.responses,
+            },
+            repeatGroups: {
+              ...prefilledRepeatGroups,
+              ...draftResult.data.repeatGroups,
+            },
+            calculatedScores: draftResult.data.calculatedScores,
+          });
+          setCurrentDraftId(draftResult.submissionId || draftId);
+          setIsDraftLoaded(true);
+          toast.success('Draft loaded successfully!');
+        } else {
+          logger.error('Failed to load draft', draftResult.error);
+          toast.error(draftResult.error || 'Failed to load draft');
+          router.replace('/dynamic-form');
+        }
+      } else {
+        setInitialFormData({
+          responses: prefilledResponses,
+          repeatGroups: prefilledRepeatGroups,
+          calculatedScores: {},
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  }, [draftId, techId, router]);
 
   useEffect(() => {
-    async function loadTemplateAndDraft() {
-      try {
-        // Always load the template first
-        const response = await fetch('/api/form-templates');
-        if (!response.ok) {
-          throw new Error('Failed to load form template');
-        }
-        const templateData = await response.json();
-        setTemplate(templateData);
-
-        // If we have a draft ID, load the draft data
-        if (draftId) {
-          const logger = getClientLogger();
-          logger.info('Loading draft', draftId);
-          const draftResult = await loadDraftResponse(draftId, getOrCreateSessionId());
-
-          if (draftResult.success && draftResult.data) {
-            logger.info('Draft loaded successfully');
-            setInitialFormData({
-              responses: draftResult.data.responses,
-              repeatGroups: draftResult.data.repeatGroups,
-              calculatedScores: draftResult.data.calculatedScores,
-            });
-            setCurrentDraftId(draftResult.submissionId || draftId);
-            setIsDraftLoaded(true);
-            toast.success('Draft loaded successfully!');
-          } else {
-            logger.error('Failed to load draft', draftResult.error);
-            toast.error(draftResult.error || 'Failed to load draft');
-            // Remove the draft parameter from URL if loading failed
-            router.replace('/dynamic-form');
-          }
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    }
-
     loadTemplateAndDraft();
-  }, [draftId, router]);
+  }, [loadTemplateAndDraft]);
 
   const handleSubmit = async (data: {
     responses: FormResponse;
@@ -109,6 +138,7 @@ const [initialFormData, setInitialFormData] = useState<{
           responses: data.responses as Record<string, unknown>,
           repeatGroups: data.repeatGroups as Record<string, unknown>,
           calculatedScores: normalizedScores,
+          rowVersions: rowVersions ?? undefined,
         },
         getOrCreateSessionId(),
         currentDraftId || undefined
@@ -117,6 +147,8 @@ const [initialFormData, setInitialFormData] = useState<{
       if (result.success) {
         logger.info('Form submitted successfully', result.submissionId);
         toast.success('Form submitted successfully!');
+
+        setRowVersions(result.rowVersions ?? null);
 
         // Clear the current draft ID since it's now submitted
         setCurrentDraftId(null);
@@ -129,7 +161,12 @@ const [initialFormData, setInitialFormData] = useState<{
         }, 1500);
       } else {
         logger.error('Form submission failed', result.error);
-        toast.error(result.error || 'Failed to submit form');
+        if (result.error === 'conflict') {
+          toast.error('This record was updated elsewhere. Reloading latest data.');
+          await loadTemplateAndDraft();
+        } else {
+          toast.error(result.error || 'Failed to submit form');
+        }
       }
     } catch (error) {
       logger.error('Form submission error', error);
@@ -139,11 +176,14 @@ const [initialFormData, setInitialFormData] = useState<{
     }
   };
 
-  const handleSaveDraft = async (data: {
-    responses: FormResponse;
-    repeatGroups: RepeatableGroupData;
-    calculatedScores: CalculatedScores | null;
-  }) => {
+  const handleSaveDraft = async (
+    data: {
+      responses: FormResponse;
+      repeatGroups: RepeatableGroupData;
+      calculatedScores: CalculatedScores | null;
+    },
+    options?: { silent?: boolean }
+  ) => {
     const logger = getClientLogger();
     logger.info('Saving draft');
 
@@ -167,6 +207,7 @@ const [initialFormData, setInitialFormData] = useState<{
           responses: data.responses as Record<string, unknown>,
           repeatGroups: data.repeatGroups as Record<string, unknown>,
           calculatedScores: normalizedScores,
+          rowVersions: rowVersions ?? undefined,
         },
         getOrCreateSessionId(),
         currentDraftId || undefined
@@ -175,6 +216,8 @@ const [initialFormData, setInitialFormData] = useState<{
       if (result.success) {
         logger.info('Draft saved successfully', result.submissionId);
 
+        setRowVersions(result.rowVersions ?? rowVersions);
+
         // Update current draft ID if this was a new draft
         if (!currentDraftId && result.submissionId) {
           setCurrentDraftId(result.submissionId);
@@ -182,10 +225,17 @@ const [initialFormData, setInitialFormData] = useState<{
           router.replace(`/dynamic-form?draft=${result.submissionId}`, { scroll: false });
         }
 
-        toast.success(currentDraftId ? 'Draft updated successfully!' : 'Draft saved successfully!');
+        if (!options?.silent) {
+          toast.success(currentDraftId ? 'Draft updated successfully!' : 'Draft saved successfully!');
+        }
       } else {
         logger.error('Draft save failed', result.error);
-        toast.error(result.error || 'Failed to save draft');
+        if (result.error === 'conflict') {
+          toast.error('Someone else updated this draft. Reloading latest data.');
+          await loadTemplateAndDraft();
+        } else {
+          toast.error(result.error || 'Failed to save draft');
+        }
       }
     } catch (error) {
       logger.error('Draft save error', error);
@@ -341,12 +391,12 @@ const [initialFormData, setInitialFormData] = useState<{
                   calculatedScores: formData.calculatedScores as CalculatedScores | null,
                 })
               }
-              onSaveDraft={(formData) =>
+              onSaveDraft={(formData, options) =>
                 handleSaveDraft({
                   responses: formData.responses as FormResponse,
                   repeatGroups: formData.repeatGroups as RepeatableGroupData,
                   calculatedScores: formData.calculatedScores as CalculatedScores | null,
-                })
+                }, options)
               }
               isSubmitting={isSubmitting}
               isSavingDraft={isSavingDraft}

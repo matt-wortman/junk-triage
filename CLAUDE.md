@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 📊 Current Project Status
+
+**For complete project status, roadmap, and metrics:** See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+
 ## 🚨 PROJECT-SPECIFIC EVIDENCE REQUIREMENTS
 
 **This project inherits the global Evidence-Based Coding Protocol. Use these commands:**
@@ -45,43 +49,24 @@ This is a web application project to replicate the Cincinnati Children's Hospita
 
 ## 🎯 PRIMARY GOAL - DYNAMIC DATABASE-DRIVEN FORMS
 
-## ⚠️ IMPORTANT: DEVELOPMENT FOCUS
-
-### Static Form is DESIGN REFERENCE ONLY
-- The `/form` route (static hardcoded form) is **FROZEN** - no further development or analysis
-- Use it ONLY as a visual design reference for UI/UX consistency
-- All development, planning, and analysis must focus on `/dynamic-form` route
-- When creating new features, copy the visual design from `/form` but implement in dynamic system
-
-### Active Development Target
-- **ONLY `/dynamic-form`** route is for active development
-- All planning, analysis, and next steps should focus on dynamic forms
-- No time should be spent on static form improvements or fixes
-
 ### Core Requirements (MUST FOLLOW)
-1. **ALL form structure must come from the database** - questions, sections, text, labels, help text, options, etc.
-2. **ALL responses must be stored in the database** - every answer, score, and user input
-3. **The visual design MUST match the hardcoded form exactly** - use the SAME shadcn/ui components and styling
-4. **NO hardcoding of form questions** - the form must be 100% database-driven
-5. **Forms must be flexible** - easy to add/remove/reorder questions by updating database only
+1. **ALL form structure comes from the database** - questions, sections, text, labels, help text, options, etc.
+2. **ALL responses are stored in the database** - every answer, score, and user input
+3. **Professional UI/UX** - Uses shadcn/ui components for consistent design
+4. **NO hardcoding of form questions** - Forms are 100% database-driven
+5. **Forms are flexible** - Add/remove/reorder questions by updating database only
 
-### What This Means
+### Implementation Architecture
 - **Database stores**: Form templates, sections, questions, field types, options, validation rules, conditional logic, scoring configs
 - **Database stores**: All user responses, form submissions, calculated scores
-- **Visual appearance**: Exactly like the current hardcoded form - same components, same styling, same layout
-- **Implementation**: Use the EXISTING shadcn/ui components (Input, Textarea, Select, etc.) that were used in hardcoded form
-- **Flexibility**: Adding a new question = database insert, NOT code change
+- **UI Components**: shadcn/ui components (Input, Textarea, Select, etc.)
+- **Flexibility**: Adding a question = database insert, NOT code change
 
-### Current Status
-- ✅ **Static form (`/form`)** - DESIGN REFERENCE ONLY - Frozen, no further development
-- ✅ **Dynamic form engine (`/dynamic-form`)** - Foundation built (types, schema, context, validation)
-- 🔧 **Missing connection** - Need to wire dynamic engine to use same UI components as static reference
-
-### The Plan
-1. **Extract visual design** - Copy shadcn/ui components and styling from static form as reference
-2. **Make it dynamic** - Components render based on database data, not hardcoded JSX
-3. **Maintain quality** - Same professional look, same user experience, but database-driven
-4. **Static form remains untouched** - Only used as visual reference, no modifications
+### Current System Status
+- ✅ **Dynamic form engine (`/dynamic-form`)** - Fully implemented and deployed
+- ✅ **Form builder (`/dynamic-form/builder`)** - Template authoring with conditional logic
+- ✅ **PDF export** - Report generation from submissions
+- ✅ **Azure deployment** - Live at tech-triage-app.azurewebsites.net
 
 ## Form Structure
 
@@ -262,132 +247,61 @@ lsof -ti:3000 | xargs -r kill -9
 - `npm run studio` - Open Prisma Studio (uses `.env.prisma-dev`)
 - `npm run db:seed:dev` - Seed dev database
 
-## Current Project Status (Updated: 2025-09-23)
+## Current Project Status
 
-### ✅ COMPLETED PHASE 1: Project Foundation
+**See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for complete current status, roadmap, and metrics.**
 
-1. **Project Setup**
-   - ✅ Next.js 14+ project initialized with TypeScript, Tailwind CSS, App Router
-   - ✅ Design system configured with brand colors (#2563EB primary blue)
-   - ✅ Dependencies installed: Prisma, React Hook Form, Zod, Lucide React
-   - ✅ shadcn/ui components installed and configured
+### Production System (Deployed)
+- ✅ **Dynamic form runtime** - Database-driven forms at `/dynamic-form`
+- ✅ **Form builder** - Template authoring at `/dynamic-form/builder`
+- ✅ **PDF export** - Report generation via `/api/form-exports`
+- ✅ **Azure deployment** - Live at https://tech-triage-app.azurewebsites.net
+- ✅ **PostgreSQL database** - Azure PostgreSQL Flexible Server
+- ✅ **Automated exports** - Windows task every 48 hours
 
-2. **Landing Page**
-   - ✅ Navigation bar with Company branding
-   - ✅ Hero section with dark gradient background and 3D technology visuals
-   - ✅ Web form preview section with placeholder cards
-   - ✅ Strategic alignment scoring visualization
-   - ✅ Responsive design following design mockups
-
-3. **Database Setup**
-   - ✅ Prisma configured with PostgreSQL
-   - ✅ Database schema created (`TriageForm`, `Competitor`, `SubjectMatterExpert` models)
-   - ✅ Initial migration completed
-   - ✅ Local Prisma database server running
-   - ✅ Prisma client utility created (`src/lib/prisma.ts`)
-
-### ✅ COMPLETED PHASE 2: Static Form Implementation (DESIGN REFERENCE ONLY)
-
-**NOTE: This phase is FROZEN - no further development. Use only as visual design reference for dynamic forms.**
-
-1. **Multi-Step Form Architecture**
-   - ✅ 9-step form navigation with progress tracking
-   - ✅ Centralized FormData type with comprehensive TypeScript definitions
-   - ✅ State management across all form sections
-   - ✅ Navigation between steps with data persistence
-
-2. **All Form Sections Implemented & Tested**
-   - ✅ **Header Section** - Basic information collection (Reviewer, Tech ID, Inventors, Domain)
-   - ✅ **Technology Overview** - Large textarea with character counting and guidance
-   - ✅ **Mission Alignment** - Text analysis + 0-3 scoring with help criteria
-   - ✅ **Unmet Need** - Clinical need assessment + 0-3 scoring
-   - ✅ **State of the Art** - Prior art analysis + 0-3 scoring
-   - ✅ **Market Analysis** - Complex section with:
-     - Market overview textarea
-     - Dynamic competitor table (add/remove/edit functionality)
-     - Auto-calculating market scores (Market Size, Patient Population, Competitors)
-     - Real-time overall market score calculation
-   - ✅ **Digital Considerations** - 4 yes/no checkboxes with legal disclaimer
-   - ✅ **Score & Recommendation** - **🏆 STAR FEATURE:**
-     - Auto-calculated Impact Score (Mission Alignment 50% + Unmet Need 50%)
-     - Auto-calculated Value Score (State of Art 50% + Market 50%)
-     - Impact vs Value matrix visualization with quadrant recommendations
-     - Real-time score updates and recommendation logic
-   - ✅ **Summary Section** - Final summary with SME table and assessment overview
-
-3. **Reusable Components**
-   - ✅ **ScoringComponent** - 0-3 scale with visual indicators and help popovers
-   - ✅ Dynamic tables for competitors and subject matter experts
-   - ✅ Progress tracking and step navigation
-   - ✅ Responsive card layouts following design system
-
-4. **Auto-Calculation Engine**
-   - ✅ **Perfect scoring logic** matching original Excel scorecard from PDF
-   - ✅ **Real-time calculations** for Impact, Value, and Market scores
-   - ✅ **Recommendation matrix** (Proceed/Alternative Pathway/Close/N/A)
-   - ✅ **Weighted scoring formulas** exactly as specified in original form
-   - ✅ **Market sub-criteria averaging** (TAM + Population + Competitors)/3
-
-5. **Complete Testing Validation**
-   - ✅ **Playwright end-to-end testing** completed successfully
-   - ✅ **All form sections tested** with realistic data entry
-   - ✅ **Auto-calculations verified** (Impact: 3.00, Value: 2.33, Recommendation: Proceed)
-   - ✅ **Navigation flow tested** through all 9 steps
-   - ✅ **Scoring components tested** with help popover functionality
-   - ✅ **Dynamic tables tested** (add/remove competitors functionality)
-
-### 🔄 CURRENT PHASE: Database Integration & Production Ready
-
-**Next Immediate Tasks:**
-1. **Server Actions Implementation** - Connect form to Prisma database
-2. **Form Submission Logic** - Save/update triage forms in database
-3. **Draft Save Functionality** - Allow users to save progress and return later
-4. **Form Validation** - Add Zod schemas for robust validation
-5. **Production Deployment** - Deploy to hosting platform
-
-### 🎯 READY FOR PRODUCTION FEATURES
-
-The form is now **fully functional** with all core features implemented:
-- ✅ Complete 9-section form matching original PDF requirements
-- ✅ Auto-calculating scores with Excel-equivalent logic
-- ✅ Enhanced Impact vs Value recommendation matrix with proper IMPACT/VALUE hierarchy
-- ✅ Dynamic tables for competitive analysis and SME recommendations
-- ✅ Professional UI/UX following design mockups with accessibility support
-- ✅ Production-ready code quality with memoization and error handling
-- ✅ Comprehensive testing validation
+### Key Features Implemented
+- Database-driven form structure (FormTemplate, FormSection, FormQuestion)
+- Form builder with conditional logic and data tables
+- Submission tracking and draft management
+- PDF export with scoring graphics
+- Auto-calculation engine (Impact/Value scoring)
+- Repeatable groups and dynamic tables
 
 ### 📁 Key Files Structure
 
 ```
 src/
 ├── app/
-│   ├── page.tsx                    # Landing page (✅ completed)
-│   ├── form/                       # 🚫 DESIGN REFERENCE ONLY - NO CHANGES
-│   │   └── page.tsx               # Static form - FROZEN for visual reference
-│   ├── dynamic-form/              # 🎯 ACTIVE DEVELOPMENT TARGET
-│   │   └── page.tsx               # Dynamic form implementation
-│   └── globals.css                # Global styles with design tokens
+│   ├── page.tsx                          # Landing page
+│   ├── dynamic-form/                     # Dynamic form system
+│   │   ├── page.tsx                      # Form runtime
+│   │   ├── builder/[templateId]/page.tsx # Form builder
+│   │   ├── submissions/page.tsx          # Submissions list
+│   │   └── actions.ts                    # Server actions
+│   ├── api/
+│   │   ├── form-templates/route.ts       # Template API
+│   │   ├── form-exports/route.tsx        # PDF export
+│   │   └── health/route.ts               # Health check
+│   └── globals.css                       # Global styles
 ├── components/
-│   ├── form/                      # 🚫 DESIGN REFERENCE ONLY - Form components (FROZEN)
-│   │   ├── HeaderSection.tsx      # Use as visual reference for dynamic version
-│   │   ├── TechnologyOverviewSection.tsx
-│   │   ├── MissionAlignmentSection.tsx
-│   │   ├── UnmetNeedSection.tsx
-│   │   ├── StateOfArtSection.tsx
-│   │   ├── MarketAnalysisSection.tsx
-│   │   ├── DigitalConsiderationsSection.tsx
-│   │   ├── ScoreRecommendationSection.tsx
-│   │   ├── SummarySection.tsx
-│   │   └── ScoringComponent.tsx   # Extract design for dynamic implementation
-│   └── ui/                        # shadcn/ui components
+│   ├── form-builder/                     # Builder UI components
+│   │   ├── SectionCard.tsx
+│   │   ├── FieldCard.tsx
+│   │   └── FieldConfigModal.tsx
+│   └── ui/                               # shadcn/ui components
 ├── lib/
-│   ├── form-engine/               # 🎯 ACTIVE DEVELOPMENT - Dynamic form system
-│   ├── prisma.ts                  # Database client (✅ completed)
-│   ├── scoring.ts                 # Auto-calculation engine (✅ completed)
-│   └── utils.ts                   # Utility functions
+│   ├── form-engine/                      # Dynamic form engine
+│   │   ├── types.ts
+│   │   ├── renderer.tsx
+│   │   ├── fields/FieldAdapters.tsx
+│   │   └── pdf/FormPdfDocument.tsx
+│   ├── prisma.ts                         # Database client
+│   ├── scoring/calculations.ts           # Auto-calculation engine
+│   └── utils.ts                          # Utility functions
 prisma/
-├── schema.prisma                  # Database schema (✅ completed)
-└── migrations/                    # Database migrations
+├── schema.prisma                         # Database schema
+├── migrations/                           # Database migrations
+└── seed/                                 # Seed data
 ```
 
 ### 🎨 Design System
@@ -404,84 +318,15 @@ prisma/
 
 ### 🗄️ Database Schema
 
-**Models Created:**
-- `TriageForm` - Main form data with all sections and scores
-- `Competitor` - Company competitor information
-- `SubjectMatterExpert` - Expert recommendations
+**Key Models:**
+- `FormTemplate` - Form structure definitions
+- `FormSection` - Sections within templates
+- `FormQuestion` - Individual questions with field types
+- `FormSubmission` - User submissions
+- `Technology` - Technology entities (binding target)
+- `QuestionDictionary` - Canonical question registry
 
-**Scoring Fields:**
-- Individual scores (0-3): missionAlignmentScore, unmetNeedScore, stateOfArtScore
-- Calculated scores: impactScore, valueScore, marketScore
-- Final recommendation: "Proceed" or "Alternative Pathway"
-
-### 🎯 CURRENT PHASE: Production Ready & Docker Deployment
-
-**Phase Status: ✅ DOCKER DEPLOYMENT FULLY FUNCTIONAL**
-
-### ✅ COMPLETED PHASE 3: Docker Production Deployment
-
-1. **TypeScript Error Resolution**
-   - ✅ Systematically fixed all 32+ TypeScript compilation errors
-   - ✅ Fixed FieldAdapters.tsx onChange type mismatch
-   - ✅ Added missing SCORING_MATRIX validation schema
-   - ✅ Fixed renderer.tsx useRef and validation type handling
-   - ✅ Fixed useSearchParams Suspense boundary issues
-
-2. **Docker Containerization**
-   - ✅ **Multi-stage Docker build successful**
-   - ✅ **Next.js production build completed** (✓ Compiled successfully in 18.4s)
-   - ✅ **Static page generation working** (11/11 pages generated)
-   - ✅ **PostgreSQL database container healthy** (port 5432)
-   - ✅ **Application container running** (port 3000)
-
-3. **Production Deployment Status**
-   - ✅ Docker containers built and running successfully
-   - ✅ **Database migration conflict FIXED** (updated scripts/start.sh to use db push instead of migrate)
-   - ✅ **API health check PASSING**: `{"status":"healthy","database":"connected"}`
-   - ✅ Full TypeScript strict checking passed
-   - ✅ Established proper development workflow (`npx tsc --noEmit` before builds)
-   - ✅ **Docker environment READY FOR TESTING** at http://localhost:3000
-
-### 🚀 Next Development Priorities
-
-1. **Feature Enhancement:**
-   - **Export Reports Functionality** - Generate PDF/Excel reports from form submissions
-   - **Form Builder Interface** - Admin interface to create/modify form templates
-   - **User Authentication** - Replace anonymous users with proper auth system
-   - **Dashboard Analytics** - Submission statistics and trend analysis
-
-2. **Production Readiness:**
-   - Deploy to cloud platform (AWS/Vercel/Railway)
-   - Set up CI/CD pipeline
-   - Configure production database
-   - Implement monitoring and logging
-
-### 🚀 How to Continue Development
-
-**CURRENT STATUS (2025-09-23 6:20 PM):**
-- ✅ **Docker containers RUNNING** and healthy
-- ✅ **Database schema synced** via fixed startup script
-- ✅ **API responding** at http://localhost:3000/api/health
-- ✅ **Ready for form testing** and feature development
-
-1. **Docker Environment (Production-like) - CURRENTLY ACTIVE:**
-   ```bash
-   docker-compose up -d     # ✅ RUNNING on ports 3000/5432
-   docker-compose logs app  # Monitor application logs
-   curl localhost:3000/api/health  # Test health endpoint
-   ```
-
-2. **Local Development (alternative):**
-   ```bash
-   npm run dev              # Development server
-   npx prisma dev          # Database server
-   npx tsc --noEmit        # Always check TypeScript before Docker builds
-   ```
-
-3. **Critical Fix Applied:**
-   - **Problem**: P3005 database migration conflict causing restart loops
-   - **Solution**: Updated `scripts/start.sh` to use `prisma db push` instead of `migrate deploy`
-   - **Result**: Containers start successfully, API healthy, ready for testing
+**See:** [docs/architecture/data-model.md](docs/architecture/data-model.md) for complete schema documentation
 
 ### 📋 Reference Files
 
@@ -492,57 +337,28 @@ prisma/
 
 ## Development Notes
 
-- The original PDF includes an embedded Excel scorecard that auto-calculates scores - this logic needs to be implemented in the web form
-- Form validation should match the scoring criteria detailed in Exhibit A of the PDF
-- The form supports both "Proceed" and "Alternative Pathway" recommendations based on scoring thresholds
-- Consider implementing draft/save functionality for long forms
-- The form generates confidential documents, so implement appropriate access controls
+- The original PDF (`Triage.pdf`) specifies scoring criteria and form structure
+- Auto-calculation engine implements Impact/Value scoring matrix
+- Draft/save functionality implemented with autosave
+- Forms generate confidential documents - Basic Auth currently in place, NextAuth planned
 
-## Recent Improvements (2025-09-22)
+## Environment Variables Required
 
-### Score & Recommendation Layout Enhancement
-- **IMPACT/VALUE Section Headers**: Added dedicated header rows with clear visual hierarchy
-- **Market Sub-criteria Integration**: Nested market details under Market row matching PDF structure
-- **Professional Styling**: Visual indicators, proper spacing, and tabular number formatting
-- **Accessibility**: Enhanced with ARIA labels, semantic markup, and screen reader support
-
-### Code Quality Improvements
-- **Performance Optimization**: Implemented `useMemo` for expensive calculations
-- **Input Validation**: Added robust `validateScore()` and `formatScore()` helpers
-- **Configuration Management**: Centralized constants in `SCORING_CONFIG`
-- **Error Handling**: Comprehensive validation for edge cases and invalid inputs
-
-### Test Coverage Added
-- Component structure validation tests
-- Score calculation accuracy tests
-- Integration with auto-calculation engine tests
-- Real-world usage scenario tests
-- Accessibility compliance verification
-
-### Environment Variables Required
-
+**Local Development:**
 ```env
-DATABASE_URL="prisma+postgres://localhost:51213/?api_key=..."  # Auto-generated by Prisma
+DATABASE_URL="prisma+postgres://localhost:51213/?api_key=..."  # Auto-generated by Prisma Dev
 ```
 
-## Important Implementation Notes
+**Production (Azure):**
+```env
+DATABASE_URL="postgresql://triageadmin:<password>@techtriage-pgflex.postgres.database.azure.com:5432/triage_db?sslmode=require"
+AZURE_STORAGE_CONNECTION_STRING="<connection-string>"
+NEXT_PUBLIC_TEST_USER_ID="test-user-1"  # For draft identity
+```
 
-### Dynamic Form System Phase 1 Complete
-- ✅ Database schema for dynamic forms (FormTemplate, FormSection, FormQuestion, etc.)
-- ✅ TypeScript types and interfaces for form engine
-- ✅ Form state management with reducer pattern
-- ✅ Conditional logic engine for field visibility
-- ✅ Validation framework
-- ✅ Seed data structure defined
+**See:** [docs/guides/deployment-guide.md](docs/guides/deployment-guide.md) for complete environment setup
 
-### Next Steps for Dynamic Forms (ACTIVE DEVELOPMENT)
-1. **Extract UI components** - Copy Input, Textarea, Select, ScoringComponent designs from static form
-2. **Wire the dynamic renderer** - Connect database fields to dynamic field adapters
-3. **Maintain visual consistency** - Must look exactly like static reference form
-4. **Database-driven everything** - Structure, text, options all from database
-5. **FOCUS ONLY ON DYNAMIC FORMS** - No time on static form analysis or improvements
-
-# important-instruction-reminders
+# Important Instruction Reminders
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.

@@ -1,4 +1,4 @@
-import { FieldType, FormTemplate, FormSection, FormQuestion, QuestionOption, ScoringConfig, Prisma } from '@prisma/client';
+import { FieldType, FormTemplate, FormSection, FormQuestion, QuestionOption, ScoringConfig, Prisma, QuestionDictionary } from '@prisma/client';
 
 // Extended types with relationships for the form engine
 export type FormTemplateWithSections = FormTemplate & {
@@ -40,6 +40,7 @@ export type FormQuestionWithDetails = Omit<FormQuestion, 'repeatableConfig'> & {
   repeatableConfig: Prisma.JsonValue | null;
   options: QuestionOption[];
   scoringConfig: ScoringConfig | null;
+  dictionary: QuestionDictionary | null;
 };
 
 // Form response types
@@ -117,7 +118,7 @@ export interface FormContext {
   nextSection: () => void;
   previousSection: () => void;
   submitForm: () => Promise<void>;
-  saveDraft: () => Promise<void>;
+  saveDraft: (options?: { silent?: boolean }) => Promise<void>;
 }
 
 // Component mapping
@@ -174,6 +175,7 @@ export type FormAction =
   | { type: 'SET_ERROR'; payload: { fieldCode: string; error: string } }
   | { type: 'CLEAR_ERRORS' }
   | { type: 'SET_CALCULATED_SCORES'; payload: CalculatedScores }
+  | { type: 'HYDRATE_INITIAL_DATA'; payload: { responses?: FormResponse; repeatGroups?: RepeatableGroupData } }
   | { type: 'RESET_FORM' };
 
 export { FieldType };

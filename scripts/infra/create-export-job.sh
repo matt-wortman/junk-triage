@@ -24,10 +24,21 @@ IMAGE_TAG="prod"
 # Schedule: every 2 days at 08:00 UTC (~03:00 ET during Standard Time)
 CRON="0 8 */2 * *"
 
-# Export settings — update as needed
-DATABASE_URL="postgresql://triageadmin:TriageAdmin2025Secure@techtriage-pgflex.postgres.database.azure.com:5432/triage_db?sslmode=require"
-EXPORT_BLOB_CONTAINER="triage-form-export"
-AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=rgeastushydroxyurea8c76;AccountKey=mz5GWAoYSE2lK95gVEi7ImaNxEvxkDmfCpzUt7GBq2/gxJmeFdNdvMGYY5L1jOEuQasF5+/M155S+ASt6a6voQ==;EndpointSuffix=core.windows.net"
+# Export settings — sourced from .env.export by default
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+ENV_FILE="$PROJECT_ROOT/tech-triage-platform/.env.export"
+
+if [ -f "$ENV_FILE" ]; then
+  echo "Loading secrets from $ENV_FILE"
+  set -a
+  # shellcheck source=/dev/null
+  . "$ENV_FILE"
+  set +a
+fi
+
+: "${DATABASE_URL:?DATABASE_URL must be set (see .env.export)}"
+: "${EXPORT_BLOB_CONTAINER:?EXPORT_BLOB_CONTAINER must be set (see .env.export)}"
+: "${AZURE_STORAGE_CONNECTION_STRING:?AZURE_STORAGE_CONNECTION_STRING must be set (see .env.export)}"
 
 # Optional: low resource profile for the job
 CPU="0.25"
@@ -65,4 +76,3 @@ az containerapp job create \
 
 echo "Job created/updated. You can run it ad-hoc with:"
 echo "  az containerapp job start -g $RG -n $JOB_NAME"
-

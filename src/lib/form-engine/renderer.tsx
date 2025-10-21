@@ -89,6 +89,15 @@ function formReducer(state: FormState, action: FormAction): FormState {
         calculatedScores: action.payload
       };
 
+    case 'HYDRATE_INITIAL_DATA':
+      return {
+        ...state,
+        responses: action.payload.responses ?? {},
+        repeatGroups: action.payload.repeatGroups ?? {},
+        isDirty: false,
+        errors: {},
+      };
+
     case 'RESET_FORM':
       return {
         template: null,
@@ -131,7 +140,7 @@ interface FormEngineProviderProps {
     responses: FormResponse;
     repeatGroups: RepeatableGroupData;
     calculatedScores: CalculatedScores | null;
-  }) => Promise<void>;
+  }, options?: { silent?: boolean }) => Promise<void>;
   initialData?: {
     responses?: FormResponse;
     repeatGroups?: RepeatableGroupData;
@@ -157,6 +166,7 @@ function FormEngineProvider({
   };
 
   const [state, dispatch] = useReducer(formReducer, initialState);
+  const previousInitialData = useRef<FormEngineProviderProps['initialData']>(initialData);
 
   // Initialize template
   useEffect(() => {
@@ -164,6 +174,21 @@ function FormEngineProvider({
       dispatch({ type: 'SET_TEMPLATE', payload: template });
     }
   }, [template]);
+
+  // Hydrate with initial data when provided/changed
+  useEffect(() => {
+    const hasNewInitialData = initialData && initialData !== previousInitialData.current;
+    if (hasNewInitialData) {
+      previousInitialData.current = initialData;
+      dispatch({
+        type: 'HYDRATE_INITIAL_DATA',
+        payload: {
+          responses: initialData?.responses ?? {},
+          repeatGroups: initialData?.repeatGroups ?? {},
+        },
+      });
+    }
+  }, [initialData]);
 
   // Auto-calculate scores when responses change
   useEffect(() => {
@@ -225,7 +250,7 @@ function FormEngineProvider({
     }
   };
 
-  const saveDraft = async () => {
+  const saveDraft = async (options?: { silent?: boolean }) => {
     if (!onSaveDraft) return;
 
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -234,7 +259,7 @@ function FormEngineProvider({
         responses: state.responses,
         repeatGroups: state.repeatGroups,
         calculatedScores: state.calculatedScores
-      });
+      }, options);
     } catch (error) {
       logger.error('Draft save error', error);
     } finally {

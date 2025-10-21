@@ -12,8 +12,6 @@ const demoSubmissions = [
       'F0.2': 'Smart Insulin Pump with Predictive Analytics',
       'F0.3': 'Dr. Jennifer Martinez',
       'F0.4': '2025-09-20',
-      'F0.5': 'Dr. Robert Kim, MD - Endocrinology; Sarah Chen, PhD - Software Engineering',
-      'F0.6': 'Department of Endocrinology, Department of Computer Science',
       'F0.7': 'medical_device',
       'F1.1.a': 'An intelligent insulin delivery system that uses machine learning to predict glucose trends and automatically adjust insulin delivery rates. The system integrates continuous glucose monitoring with advanced algorithms to prevent dangerous highs and lows in pediatric diabetic patients.',
       'F1.1.b': 'Pediatric endocrinologists, diabetes nurses, children with Type 1 diabetes (ages 6-18), parents and caregivers of diabetic children.',
@@ -40,6 +38,10 @@ const demoSubmissions = [
       'F5.4': 'Yes',
     },
     repeatGroups: {
+      'F0.5': [
+        { name: 'Dr. Robert Kim, MD', title: 'MD', department: 'Endocrinology' },
+        { name: 'Sarah Chen, PhD', title: 'PhD', department: 'Computer Science' },
+      ],
       'F4.2.a': [
         { company: 'Medtronic', product: 'MiniMed 780G', revenue: '$2.8B annually', contact: 'Available through sales team' },
         { company: 'Tandem Diabetes', product: 'Control-IQ', revenue: '$600M annually', contact: 'Partnership opportunities exist' },
@@ -66,8 +68,6 @@ const demoSubmissions = [
       'F0.2': 'VR Pain Distraction Therapy System',
       'F0.3': 'Dr. Michael Thompson',
       'F0.4': '2025-09-18',
-      'F0.5': 'Dr. Alex Rivera, MD - Pain Management; Jamie Park, MS - Game Design',
-      'F0.6': 'Department of Pain Management, Department of Psychology',
       'F0.7': 'digital_health',
       'F1.1.a': 'A virtual reality system specifically designed for pediatric patients undergoing painful procedures. Uses immersive environments and biometric feedback to reduce perceived pain and anxiety during medical treatments.',
       'F1.1.b': 'Pediatric patients ages 4-16, child life specialists, nurses, physicians performing procedures, hospital administrators.',
@@ -94,6 +94,10 @@ const demoSubmissions = [
       'F5.4': 'No',
     },
     repeatGroups: {
+      'F0.5': [
+        { name: 'Dr. Alex Rivera, MD', title: 'MD', department: 'Pain Management' },
+        { name: 'Jamie Park, MS', title: 'MS', department: 'Game Design' },
+      ],
       'F4.2.a': [
         { company: 'AppliedVR', product: 'RelieVRx', revenue: '$50M annually', contact: 'FDA-cleared VR therapeutic' },
         { company: 'KindVR', product: 'Pediatric VR Suite', revenue: '$25M annually', contact: 'Direct competitor' },
@@ -120,8 +124,6 @@ const demoSubmissions = [
       'F0.2': 'Rapid Genetic Screening for Newborns',
       'F0.3': 'Dr. Lisa Chang',
       'F0.4': '2025-09-15',
-      'F0.5': 'Dr. Lisa Chang, MD, PhD - Genetics; Dr. Peter Walsh, PhD - Bioinformatics',
-      'F0.6': 'Department of Genetics, Department of Bioinformatics',
       'F0.7': 'diagnostic',
       'F1.1.a': 'A rapid genetic screening platform that can identify over 500 genetic conditions in newborns within 6 hours using next-generation sequencing and AI-powered analysis algorithms.',
       'F1.1.b': 'Neonatologists, genetic counselors, NICU staff, laboratory technicians, parents of newborns with suspected genetic conditions.',
@@ -148,6 +150,10 @@ const demoSubmissions = [
       'F5.4': 'No',
     },
     repeatGroups: {
+      'F0.5': [
+        { name: 'Dr. Lisa Chang, MD, PhD', title: 'MD, PhD', department: 'Genetics' },
+        { name: 'Dr. Peter Walsh, PhD', title: 'PhD', department: 'Bioinformatics' },
+      ],
       'F4.2.a': [
         { company: 'Illumina', product: 'NovaSeq Series', revenue: '$3.5B annually', contact: 'Sequencing platform leader' },
         { company: 'Thermo Fisher', product: 'Ion Torrent', revenue: '$2.1B annually', contact: 'Rapid sequencing focus' },
@@ -175,8 +181,6 @@ const demoSubmissions = [
       'F0.2': 'AI-Powered Pediatric Radiology Assistant',
       'F0.3': 'Dr. Sarah Johnson',
       'F0.4': '2025-09-22',
-      'F0.5': 'Dr. Sarah Johnson, MD - Radiology; Tom Chen, MS - Machine Learning',
-      'F0.6': 'Department of Radiology, IT Innovation Lab',
       'F0.7': 'other',
       'F1.1.a': 'An AI system that assists radiologists in detecting abnormalities in pediatric imaging studies, with special focus on rare conditions that are often missed in initial readings.',
       'F1.1.b': 'Pediatric radiologists, general radiologists reviewing pediatric cases, emergency physicians.',
@@ -184,7 +188,12 @@ const demoSubmissions = [
       'F2.1.score': 2,
       'F2.2.score': 3,
     },
-    repeatGroups: {},
+    repeatGroups: {
+      'F0.5': [
+        { name: 'Dr. Sarah Johnson, MD', title: 'MD', department: 'Radiology' },
+        { name: 'Tom Chen, MS', title: 'MS', department: 'Machine Learning' },
+      ],
+    },
     calculatedScores: {} // No calculations for draft
   }
 ];

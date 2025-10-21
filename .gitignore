@@ -55,6 +55,7 @@ scrolling*.txt
 Matt's*.txt
 STATUS-*.md
 history/
+backups/
 
 # Environment backups
 .env.backup*

@@ -4,9 +4,32 @@ import { FormTemplateSeed } from './types';
 import { getPrismaClient } from './prisma-factory';
 
 const formStructureData: FormTemplateSeed = completeFormStructure;
+const QUESTION_DICTIONARY_MAP: Record<string, string> = {
+  'F0.1': 'tech.techId',
+  'F0.2': 'tech.technologyName',
+  'F0.3': 'tech.reviewerName',
+  'F0.5': 'tech.inventorName',
+  'F0.7': 'tech.domainAssetClass',
+  'F1.1.a': 'triage.technologyOverview',
+  'F2.1.a': 'triage.missionAlignmentText',
+  'F2.1.score': 'triage.missionAlignmentScore',
+  'F2.2.a': 'triage.unmetNeedText',
+  'F2.2.score': 'triage.unmetNeedScore',
+  'F3.1.a': 'triage.stateOfArtText',
+  'F3.2.score': 'triage.stateOfArtScore',
+  'F4.1.a': 'triage.marketOverview',
+  'F6.2': 'triage.recommendation',
+  'F6.3': 'triage.recommendationNotes',
+};
 
 export async function seedFormStructure(injectedPrisma?: PrismaClient) {
   const prisma = getPrismaClient(injectedPrisma);
+
+  // Deactivate existing active templates so the newly seeded one becomes canonical
+  await prisma.formTemplate.updateMany({
+    where: { isActive: true },
+    data: { isActive: false },
+  });
 
   // Create the form template
   const template = await prisma.formTemplate.create({
@@ -37,6 +60,8 @@ export async function seedFormStructure(injectedPrisma?: PrismaClient) {
 
     // Create questions for this section
     for (const questionData of sectionData.questions) {
+      const dictionaryKey = questionData.dictionaryKey ?? QUESTION_DICTIONARY_MAP[questionData.fieldCode];
+
       const question = await prisma.formQuestion.create({
         data: {
           sectionId: section.id,
@@ -47,8 +72,10 @@ export async function seedFormStructure(injectedPrisma?: PrismaClient) {
           placeholder: questionData.placeholder ?? null,
           validation: toJsonValue(questionData.validation),
           conditional: toJsonValue(questionData.conditional),
+          repeatableConfig: toJsonValue(questionData.repeatableConfig),
           order: questionData.order,
           isRequired: questionData.isRequired,
+          dictionaryKey: dictionaryKey ?? null,
         },
       });
 

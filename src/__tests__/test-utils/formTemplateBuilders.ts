@@ -25,6 +25,8 @@ export function createMockQuestion(
     repeatableConfig: overrides.repeatableConfig ?? null,
     options: overrides.options ?? [],
     scoringConfig: overrides.scoringConfig ?? null,
+    dictionaryKey: overrides.dictionaryKey ?? null,
+    dictionary: overrides.dictionary ?? null,
   };
 }
 

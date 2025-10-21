@@ -13,7 +13,10 @@ type SubmissionStatusValue = 'DRAFT' | 'SUBMITTED' | 'REVIEWED' | 'ARCHIVED';
 const AUTOSAVE_DELAY_MS = 4000;
 
 interface DynamicFormNavigationProps {
-  onSaveDraft?: (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => void;
+  onSaveDraft?: (
+    data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown },
+    options?: { silent?: boolean }
+  ) => void;
   onSubmit?: (data: { responses: Record<string, unknown>; repeatGroups: Record<string, unknown>; calculatedScores: unknown }) => void;
   isSubmitting?: boolean;
   isSavingDraft?: boolean;
@@ -111,11 +114,14 @@ export function DynamicFormNavigation({
       setAutosaveStatus('saving');
       try {
         await Promise.resolve(
-          onSaveDraft({
-            responses: latestDataRef.current.responses,
-            repeatGroups: latestDataRef.current.repeatGroups,
-            calculatedScores: latestDataRef.current.calculatedScores,
-          })
+          onSaveDraft(
+            {
+              responses: latestDataRef.current.responses,
+              repeatGroups: latestDataRef.current.repeatGroups,
+              calculatedScores: latestDataRef.current.calculatedScores,
+            },
+            { silent: true }
+          )
         );
         lastSavedSnapshotRef.current = JSON.stringify({
           responses: latestDataRef.current.responses,
@@ -373,7 +379,7 @@ export function DynamicFormNavigation({
       setAutosaveStatus('saving');
       if (onSaveDraft) {
         getClientLogger().info('Saving draft', { hasResponses: hasResponseValues(responses, repeatGroups) });
-        await Promise.resolve(onSaveDraft(formData));
+        await Promise.resolve(onSaveDraft(formData, { silent: false }));
       } else {
         await saveDraft();
       }
