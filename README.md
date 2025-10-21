@@ -1,58 +1,27 @@
-# CCHMC Technology Triage Platform - Documentation Repository
+# CCHMC Technology Triage Platform – Coordination Workspace
 
-This repository contains documentation, planning materials, and source requirements for the Cincinnati Children's Hospital Medical Center (CCHMC) Technology Triage Platform.
+This repository hosts planning materials, reference docs, and the `tech-triage-platform/` submodule (production code).
+
+## 📌 Start Here
+- **[tech-triage-platform/docs/PROJECT_STATUS.md](tech-triage-platform/docs/PROJECT_STATUS.md)** – current status & roadmap
+- [tech-triage-platform/README.md](tech-triage-platform/README.md) – developer setup & architecture
+- [tech-triage-platform/CLAUDE.md](tech-triage-platform/CLAUDE.md) – AI agent instructions
 
 ## 📦 Production Code
+The application code lives in the `tech-triage-platform/` submodule. Follow its README for all development, deployment, and operational steps.
 
-The **production application code** is located in the `tech-triage-platform/` submodule.
+## 📚 Reference Materials
 
-**To access the production code:**
-- **On GitHub:** Click the `tech-triage-platform` folder (links to the production branch)
-- **Locally:** Navigate to `tech-triage-platform/` directory
-- **Full README:** See [tech-triage-platform/README.md](tech-triage-platform/README.md) for complete setup and deployment instructions
+### Branding & Design
+- `styles/cincinnati-childrens-style-guide.md` – CCHMC branding guidelines
+- `styles/codex_branding.md` – Codex branding reference
 
-**Quick Start:**
-```bash
-cd tech-triage-platform
-npm install
-npm run dev              # Web server (port 3000)
-npx prisma dev          # Database server
-```
+### Utility Scripts
+- `scripts/util/attach-dictionary-keys.ts` – Question dictionary key attachment utility
+- `src/lib/errors.ts` – Shared error classes (OptimisticLockError)
 
-## 📚 Repository Contents
+## 🗄 Historical Planning & Critiques
+Documents that pre-date the current architecture are archived under:
+- [docs/archive/planning-2025/](docs/archive/planning-2025/) – Architecture proposals and critiques
 
-### Documentation
-- **[CLAUDE.md](CLAUDE.md)** - AI assistant instructions and project context
-- **[docs/](docs/)** - Structured documentation
-  - `docs/adrs/` - Architecture Decision Records
-  - `docs/technical/` - Technical architecture
-  - `docs/process/` - Development processes
-
-### Source Materials
-- **[source_material/](source_material/)** - Original requirements and designs
-  - `Triage.pdf` - Original CCHMC form specification
-  - Design mockups and system diagrams
-
-## 🚀 Getting Started
-
-### For Developers
-1. Clone this repository (includes documentation)
-2. Navigate to `tech-triage-platform/` for production code
-3. Follow setup instructions in [tech-triage-platform/README.md](tech-triage-platform/README.md)
-
-### For Reviewers
-- Read [CLAUDE.md](CLAUDE.md) for project overview and context
-- Review original requirements in [source_material/](source_material/)
-- Check technical docs in [docs/technical/](docs/technical/)
-
-## 🔗 Links
-
-- **Production Code:** [tech-triage-platform/](tech-triage-platform/)
-- **GitHub Repository:** https://github.com/matt-wortman/junk-triage
-- **Production Branch:** [phase3-database-driven-form](https://github.com/matt-wortman/junk-triage/tree/phase3-database-driven-form)
-
-## 📝 About This Project
-
-The Technology Triage Platform is a web application that digitalizes the CCHMC technology evaluation process. It features a modern, database-driven architecture built with Next.js, TypeScript, and PostgreSQL.
-
-For complete project details, architecture, and deployment instructions, see the [production README](tech-triage-platform/README.md).
+**Note:** These files are preserved for reference only. Use the submodule documentation for current system information.

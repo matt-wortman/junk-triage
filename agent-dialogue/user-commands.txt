@@ -1,0 +1,17 @@
+# User Commands
+
+# This file is read by agents before each turn.
+# Add commands here to control the dialogue session.
+# Remove or comment out commands once they've been processed.
+
+# Available commands:
+# - PAUSE: Stop agents from participating until RESUME
+# - RESUME: Continue after PAUSE
+# - RESET: Start a new conversation (archive current)
+# - SWITCH-TOPIC: [new topic description]
+# - END-SESSION: Conclude the dialogue
+# - PRIORITY: [urgent message to agents]
+# - AGENT-1-ONLY: Only AGENT-1 should respond next
+# - AGENT-2-ONLY: Only AGENT-2 should respond next
+
+# No active commands - agents may proceed normally
