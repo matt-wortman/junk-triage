@@ -1,5 +1,5 @@
 # Tech Triage Platform – Project Status Dashboard
-_Last updated: 2025-10-21_
+_Last updated: 2025-10-22_
 
 ## ✅ Production Snapshot
 - Dynamic triage form runtime (Next.js 15 + Prisma) is live at **https://tech-triage-app.azurewebsites.net**.
@@ -12,8 +12,9 @@ _Last updated: 2025-10-21_
 1. **Binding write-back** parity across Technology/Triage entities using `applyBindingWrites` regression tests.
 2. **Optimistic locking UX** – surface stale draft messaging, retry flows, and autosave conflict handling.
 3. **Catalog + validator coverage** for Viability stage questions and calculated metrics; wire `scripts/util/attach-dictionary-keys.ts` into CI.
-4. **Security hardening** – finalize Basic Auth timing-safe compare, prepare NextAuth adoption plan, and scrub hardcoded config.
-5. **Persona enablement groundwork** – authorization matrix and visibility rules ahead of Viability dashboards.
+4. **Phase 0 (QuestionRevision + stale detection) pilot** – shadow schema, backfill, and perf validation before enabling by default.
+5. **Security hardening** – finalize Basic Auth timing-safe compare, prepare NextAuth adoption plan, and scrub hardcoded config.
+6. **Persona enablement groundwork** – authorization matrix and visibility rules ahead of Viability dashboards.
 
 ## 📋 Next Up (Prioritized Backlog)
 - Complete binding write-back rollout → unblock persona-aware dashboards.
@@ -21,6 +22,7 @@ _Last updated: 2025-10-21_
 - Expand catalog validator coverage → ensure builder and runtime stay aligned.
 - Draft NextAuth/SSO decision ADR → unblock authentication implementation.
 - Instrument monitoring/alerting (App Service logs, Azure Monitor) → tighten ops feedback loop.
+- Execute Phase 0 question-revision pilot using [Implementation Guide](architecture/implementation-guide-question-revisions.md) → record evidence & go/no-go.
 
 ## 🔢 Key Metrics
 | Metric | Value | Notes |
@@ -47,6 +49,8 @@ _Last updated: 2025-10-21_
 - [Release notes](release-notes/) – version history
 - [Documentation structure](README.md)
 - [Historical status log (≤2025-10-10)](archive/status-log-2025-10-10.md)
+- [Question Library – design overview](architecture/reusable-question-library.md)
+- [Implementation Guide – question revisions rollout](architecture/implementation-guide-question-revisions.md)
 
 ## 🆕 Recent Highlights (2025-10-21)
 - Rotated Azure Postgres admin password and storage account key; App Service connection strings updated.
