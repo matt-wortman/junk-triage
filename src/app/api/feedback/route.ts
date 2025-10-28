@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     let payload: unknown;
     try {
       payload = await request.json();
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         {
           success: false,

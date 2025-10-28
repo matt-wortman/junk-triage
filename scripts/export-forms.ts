@@ -42,7 +42,7 @@ const run = async (): Promise<void> => {
   );
 
   const workbook = buildWorkbook(submissions, { timezone: config.timezone });
-  const result = await deliverWorkbook(workbook, config, submissions.length);
+  const result = await deliverWorkbook(workbook, config);
 
   console.log(
     JSON.stringify({

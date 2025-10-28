@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Prisma, PrismaClient } from '@prisma/client';

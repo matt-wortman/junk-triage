@@ -47,7 +47,7 @@ const writeLocally = async (buffer: Buffer, config: ExportConfig): Promise<strin
   return targetPath;
 };
 
-export const deliverWorkbook = async (workbook: ExcelJS.Workbook, config: ExportConfig, submissionCount: number): Promise<ExportResult> => {
+export const deliverWorkbook = async (workbook: ExcelJS.Workbook, config: ExportConfig): Promise<ExportResult> => {
   const arrayBuffer = await workbook.xlsx.writeBuffer();
   const buffer = Buffer.from(arrayBuffer);
 

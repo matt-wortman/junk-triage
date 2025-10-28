@@ -410,6 +410,7 @@ export async function saveDraftResponse(
  */
 export async function loadDraftResponse(draftId: string, userId?: string) {
   try {
+    const resolvedUser = resolveUserId(userId)
     const submission = await prisma.formSubmission.findFirst({
       where: {
         id: draftId,
@@ -423,6 +424,7 @@ export async function loadDraftResponse(draftId: string, userId?: string) {
     })
 
     if (!submission) {
+      logger.warn({ draftId, requestedBy: resolvedUser }, 'Draft not found or access denied')
       return {
         success: false,
         error: 'Draft not found or access denied',
@@ -447,6 +449,8 @@ export async function loadDraftResponse(draftId: string, userId?: string) {
     submission.scores.forEach((score) => {
       calculatedScores[score.scoreType] = score.value
     })
+
+    logger.info({ draftId, requestedBy: resolvedUser }, 'Draft loaded successfully')
 
     return {
       success: true,
@@ -473,6 +477,7 @@ export async function loadDraftResponse(draftId: string, userId?: string) {
  */
 export async function deleteDraftResponse(draftId: string, userId?: string) {
   try {
+    const resolvedUser = resolveUserId(userId)
     const submission = await prisma.formSubmission.findFirst({
       where: {
         id: draftId,
@@ -481,6 +486,7 @@ export async function deleteDraftResponse(draftId: string, userId?: string) {
     })
 
     if (!submission) {
+      logger.warn({ draftId, requestedBy: resolvedUser }, 'Draft not found or access denied during delete')
       return {
         success: false,
         error: 'Draft not found or access denied',
@@ -493,6 +499,7 @@ export async function deleteDraftResponse(draftId: string, userId?: string) {
     })
 
     revalidatePath('/dynamic-form/drafts')
+    logger.info({ draftId, deletedBy: resolvedUser }, 'Draft deleted')
 
     return {
       success: true,

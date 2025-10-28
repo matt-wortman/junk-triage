@@ -20,9 +20,13 @@ describe('applyBindingWrites', () => {
   const technologyUpdate = jest.fn();
   const technologyCreate = jest.fn();
   const triageStageUpdate = jest.fn();
+  const triageStageUpdateMany = jest.fn();
   const triageStageCreate = jest.fn();
+  const triageStageFindUnique = jest.fn();
   const viabilityStageUpdate = jest.fn();
+  const viabilityStageUpdateMany = jest.fn();
   const viabilityStageCreate = jest.fn();
+  const viabilityStageFindUnique = jest.fn();
 
   const mockTx = {
     technology: {
@@ -32,11 +36,15 @@ describe('applyBindingWrites', () => {
     },
     triageStage: {
       update: triageStageUpdate,
+      updateMany: triageStageUpdateMany,
       create: triageStageCreate,
+      findUnique: triageStageFindUnique,
     },
     viabilityStage: {
       update: viabilityStageUpdate,
+      updateMany: viabilityStageUpdateMany,
       create: viabilityStageCreate,
+      findUnique: viabilityStageFindUnique,
     },
   } as unknown as Prisma.TransactionClient;
 
@@ -80,6 +88,12 @@ const baseBindings: Record<string, BindingMetadata> = {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    triageStageCreate.mockResolvedValue({ rowVersion: 1 });
+    triageStageFindUnique.mockResolvedValue({ rowVersion: 2 });
+    triageStageUpdateMany.mockResolvedValue({ count: 1 });
+    viabilityStageCreate.mockResolvedValue({ rowVersion: 1 });
+    viabilityStageFindUnique.mockResolvedValue({ rowVersion: 2 });
+    viabilityStageUpdateMany.mockResolvedValue({ count: 1 });
   });
 
   it('updates existing technology and triage stage fields', async () => {
@@ -101,7 +115,7 @@ const baseBindings: Record<string, BindingMetadata> = {
       userId: 'tester',
     });
 
-    expect(result).toEqual({ technologyId: 'tech-1', techId: 'D25-0001' });
+    expect(result).toMatchObject({ technologyId: 'tech-1', techId: 'D25-0001' });
     expect(technologyUpdate).toHaveBeenCalledWith({
       where: { id: 'tech-1' },
       data: expect.objectContaining({
@@ -145,7 +159,7 @@ const baseBindings: Record<string, BindingMetadata> = {
       allowCreateWhenIncomplete: true,
     });
 
-    expect(result).toEqual({ technologyId: 'tech-2', techId: 'D25-0002' });
+    expect(result).toMatchObject({ technologyId: 'tech-2', techId: 'D25-0002' });
     expect(technologyCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         techId: 'D25-0002',

@@ -38,7 +38,13 @@ Code reviews and technical audits
 User and operational guides
 - [Admin Guide](./guides/admin-guide.md)
 - [Deployment Guide](./guides/deployment-guide.md)
+- [CI Pipeline Setup Runbook](./runbooks/CI_PIPELINE_SETUP.md)
+- [Security Monitoring Runbook](./runbooks/SECURITY_MONITORING.md)
+- [Azure ↔︎ GitHub OIDC Setup Runbook](./runbooks/AZURE_GITHUB_OIDC_SETUP.md)
 - [Export Backup Workflow](./runbooks/EXPORT_JOB_SETUP.md)
+
+### [Security](./security/)
+- [Security Configuration Checklist](./security/SECURITY_CHECKLIST.md)
 
 ### Operational Artifacts
 - [Technology Multi-Form Test Results](./TECHNOLOGY_MULTI_FORM_TEST_RESULTS.md)

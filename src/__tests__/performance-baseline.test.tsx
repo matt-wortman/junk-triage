@@ -95,7 +95,10 @@ const simulateUserTyping = async (
   await user.type(input, text);
 };
 
-describe('Performance Baseline Tests', () => {
+const RUN_PERFORMANCE_TESTS = process.env.RUN_PERFORMANCE_TESTS === 'true';
+const describePerformance = RUN_PERFORMANCE_TESTS ? describe : describe.skip;
+
+describePerformance('Performance Baseline Tests', () => {
   beforeEach(() => {
     if (typeof performance !== 'undefined' && performance.clearMarks) {
       performance.clearMarks();

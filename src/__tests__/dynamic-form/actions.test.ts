@@ -1,12 +1,13 @@
 /**
  * @jest-environment node
  */
+/* eslint-disable no-var */
 import { saveDraftResponse, loadDraftResponse } from '@/app/dynamic-form/actions';
 import type { Prisma } from '@prisma/client';
 import { DataSource } from '@prisma/client';
 import { OptimisticLockError } from '@/lib/technology/types';
 
-var prismaMocks: {
+type PrismaMocks = {
   formSubmissionCreate: jest.Mock;
   formSubmissionFindFirst: jest.Mock;
   questionResponseCreateMany: jest.Mock;
@@ -14,6 +15,7 @@ var prismaMocks: {
   calculatedScoreCreateMany: jest.Mock;
 };
 
+var prismaMocks: PrismaMocks;
 var mockApplyBindingWrites: jest.Mock;
 var mockFetchTemplateWithBindingsById: jest.Mock;
 

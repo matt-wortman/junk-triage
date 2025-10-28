@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,17 +65,7 @@ function SubmissionsContent() {
   const innerCardClass =
     'bg-white border-0 rounded-3xl [box-shadow:5px_5px_10px_0px_#a3b1c6,_-5px_-5px_10px_0px_rgba(255,255,255,0.6)]';
 
-  useEffect(() => {
-    loadSubmissions();
-
-    if (justSubmitted) {
-      toast.success('Form submitted successfully!');
-      setTimeout(() => setShowSuccessBanner(false), 5000);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [justSubmitted]);
-
-  const loadSubmissions = async () => {
+  const loadSubmissions = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getUserSubmissions(getOrCreateSessionId(), 'all');
@@ -97,7 +87,16 @@ function SubmissionsContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadSubmissions();
+
+    if (justSubmitted) {
+      toast.success('Form submitted successfully!');
+      setTimeout(() => setShowSuccessBanner(false), 5000);
+    }
+  }, [justSubmitted, loadSubmissions]);
 
   const handleDownload = async (submissionId: string, submissionName: string) => {
     setDownloadingId(submissionId);
