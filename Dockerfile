@@ -20,7 +20,7 @@ FROM base AS deps
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 # Install dependencies separately to keep build caching efficient without BuildKit
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev
+RUN npm ci --include=dev --ignore-scripts
 
 # =====================================
 # Build stage - compile application
@@ -40,7 +40,7 @@ RUN npm run build
 FROM base AS prod-deps
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # =====================================
 # Final production stage
