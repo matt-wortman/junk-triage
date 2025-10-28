@@ -30,6 +30,9 @@
 - Added `.github/workflows/nightly-regression.yml` to execute the performance and validation regression suites nightly (`RUN_PERFORMANCE_TESTS` / `RUN_VALIDATION_FAILURE_TESTS`) and publish coverage artifacts for follow-up.
 - Updated `docs/runbooks/SECURITY_MONITORING.md` to accurately reflect the current GitHub Advanced Security limitations (secret scanning, private vulnerability reporting, and dashboard visibility remain gated).
 - Removed the Codecov upload step from the CI workflow to avoid secret resolution errors for forks and documented how to re-enable it if coverage publishing is needed.
+- Triggered `CI - Build & Test` via GitHub CLI (`workflow_dispatch`) to validate the updated workflow end-to-end on `master` and confirm manual invocation works without the Codecov step.
+- Enabled branch protection on `master` with required status checks (`CI - Build & Test`, strict updates, admins enforced) using the GitHub CLI now that the repository is public.
+- Mirrored the branch protection rule onto `phase3-database-driven-form` so feature work must satisfy the same CI gate before merging.
 - Expanded the CI workflow triggers to run on pushes/PRs targeting `master`, `main`, and `phase3-database-driven-form`, and added `workflow_dispatch` for manual runs from the Actions UI.
 
 ### Next
@@ -38,3 +41,4 @@
 - Enable branch protection on `main` to require the `CI - Build & Test` workflow (and optionally `Nightly Regression`) once the runs are consistently green.
 - Continue exploring alternatives for surfacing Trivy/CodeQL results without GitHub Advanced Security dashboards; document findings or migration path if licensing changes.
 - Keep Azure OIDC and secret cleanup tasks deferred until we resume the cloud hardening track (tracked in `docs/security/SECURITY_CHECKLIST.md`).
+- Stage the question library rollout once the Phase 0 pilot is signed off: finalize pilot exit criteria, convert `docs/architecture/reusable-question-library.md` into implementation tickets, and outline migration/backfill steps so the next sprint starts directly on catalog integration.
