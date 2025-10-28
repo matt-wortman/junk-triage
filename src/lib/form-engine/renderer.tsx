@@ -167,6 +167,15 @@ function FormEngineProvider({
 
   const [state, dispatch] = useReducer(formReducer, initialState);
   const previousInitialData = useRef<FormEngineProviderProps['initialData']>(initialData);
+  // Track a stable digest of initialData to avoid re-hydration unless contents change
+  const initialDataDigestRef = useRef<string | null>(
+    initialData
+      ? JSON.stringify({
+          responses: initialData.responses ?? {},
+          repeatGroups: initialData.repeatGroups ?? {},
+        })
+      : null
+  );
 
   // Initialize template
   useEffect(() => {
@@ -175,16 +184,26 @@ function FormEngineProvider({
     }
   }, [template]);
 
-  // Hydrate with initial data when provided/changed
+  // Hydrate with initial data only when the serialized contents change
   useEffect(() => {
-    const hasNewInitialData = initialData && initialData !== previousInitialData.current;
-    if (hasNewInitialData) {
+    if (!initialData) {
+      return; // Do not clear existing user input when initialData disappears
+    }
+
+    const newDigest = JSON.stringify({
+      responses: initialData.responses ?? {},
+      repeatGroups: initialData.repeatGroups ?? {},
+    });
+
+    const contentsChanged = newDigest !== initialDataDigestRef.current;
+    if (contentsChanged) {
+      initialDataDigestRef.current = newDigest;
       previousInitialData.current = initialData;
       dispatch({
         type: 'HYDRATE_INITIAL_DATA',
         payload: {
-          responses: initialData?.responses ?? {},
-          repeatGroups: initialData?.repeatGroups ?? {},
+          responses: initialData.responses ?? {},
+          repeatGroups: initialData.repeatGroups ?? {},
         },
       });
     }
