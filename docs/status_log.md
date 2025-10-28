@@ -2,6 +2,29 @@
 
 ## 2025-10-28
 
+### Executive Handoff Summary (for the next AI)
+- Repository visibility: Public (branch protection on Free requires public; on private, keep Pro/Team or re‑apply rules).
+- Branch protection: Enabled on `master` and `phase3-database-driven-form` requiring the `ci` status check (strict up‑to‑date, admins enforced).
+- CI workflow: Present and validated. File `.github/workflows/ci.yml` (repo root). Triggers: PRs/pushes to `master`, `main`, `phase3-database-driven-form` + manual `workflow_dispatch`.
+- CI steps: checkout → Node 20 → install → type‑check → lint → tests (coverage) → build → Docker build (size warning) → PR success comment.
+- Simplifications: Codecov upload removed; path filters removed so docs‑only PRs also run CI.
+- Optional workflows: Nightly regression and Security scan are planned; if missing on this branch, that’s expected—enable later via runbooks.
+
+Quick verification
+- Re‑run CI: `gh workflow run "CI - Build & Test" --ref <branch>`
+- Check protection: `gh api repos/<owner>/<repo>/branches/<branch>/protection`
+
+Next major workstream – Reusable Question Library (slice into tickets)
+1) Schema/migrations: add `QuestionRevision`; link `QuestionDictionary.currentRevisionId/currentVersion`.
+2) Backfill: seed revisions from existing dictionary (idempotent script).
+3) Answers: persist `questionRevisionId` (incl. flexible `extendedData`).
+4) Loader: stale‑answer detection + banner when revision differs.
+5) Builder UI: library picker + version visibility; prevent silent breaking edits.
+6) Runtime: `DynamicFormRenderer` resolves catalog refs without perf regressions.
+7) Snapshot: include question definitions + revision ids; add simple viewer.
+8) Tests: coverage for migration, stale detection, and perf baselines.
+9) Rollout: feature flags, dual‑write window, and backfill progress logging.
+
 ### Plan
 - Establish baseline CI automation by adding the `ci.yml` workflow (Template 1) so every PR runs lint, type-check, tests, and build.
 - Remove the Docker lint bypass in `next.config.ts` to ensure lint errors block builds locally and in CI.
@@ -30,15 +53,13 @@
 - Added `.github/workflows/nightly-regression.yml` to execute the performance and validation regression suites nightly (`RUN_PERFORMANCE_TESTS` / `RUN_VALIDATION_FAILURE_TESTS`) and publish coverage artifacts for follow-up.
 - Updated `docs/runbooks/SECURITY_MONITORING.md` to accurately reflect the current GitHub Advanced Security limitations (secret scanning, private vulnerability reporting, and dashboard visibility remain gated).
 - Removed the Codecov upload step from the CI workflow to avoid secret resolution errors for forks and documented how to re-enable it if coverage publishing is needed.
-- Triggered `CI - Build & Test` via GitHub CLI (`workflow_dispatch`) to validate the updated workflow end-to-end on `master` and confirm manual invocation works without the Codecov step.
-- Enabled branch protection on `master` with required status checks (`CI - Build & Test`, strict updates, admins enforced) using the GitHub CLI now that the repository is public.
-- Mirrored the branch protection rule onto `phase3-database-driven-form` so feature work must satisfy the same CI gate before merging.
-- Expanded the CI workflow triggers to run on pushes/PRs targeting `master`, `main`, and `phase3-database-driven-form`, and added `workflow_dispatch` for manual runs from the Actions UI.
+- Expanded CI triggers to `master`, `main`, and `phase3-database-driven-form`; added `workflow_dispatch`; removed path filters so docs-only PRs run CI.
+- Enabled branch protection on `master` and `phase3-database-driven-form` requiring the `ci` status check (strict updates, admins enforced).
+- Ensured `.github/workflows/ci.yml` exists on the `phase3-database-driven-form` branch; validated with green CI on PRs and pushes.
+- Authored `github_transition.md` summarizing the GitHub/CI/security changes and added a comprehension quiz appendix.
 
 ### Next
-- In GitHub UI, confirm Actions workflow permissions remain **Read and write** and re-run the CI workflow to verify the PR comment step succeeds now that Codecov uploads are disabled.
 - Monitor the `Nightly Regression` workflow outcomes and decide whether to elevate the optional suites into required CI checks.
-- Enable branch protection on `main` to require the `CI - Build & Test` workflow (and optionally `Nightly Regression`) once the runs are consistently green.
 - Continue exploring alternatives for surfacing Trivy/CodeQL results without GitHub Advanced Security dashboards; document findings or migration path if licensing changes.
 - Keep Azure OIDC and secret cleanup tasks deferred until we resume the cloud hardening track (tracked in `docs/security/SECURITY_CHECKLIST.md`).
-- Stage the question library rollout once the Phase 0 pilot is signed off: finalize pilot exit criteria, convert `docs/architecture/reusable-question-library.md` into implementation tickets, and outline migration/backfill steps so the next sprint starts directly on catalog integration.
+- Break down `docs/architecture/reusable-question-library.md` into implementation tickets; proceed with Phase 0 pilot exit and begin catalog integration next sprint.

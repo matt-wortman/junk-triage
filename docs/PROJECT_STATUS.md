@@ -9,7 +9,7 @@ _Last updated: 2025-10-28_
 - Evidence-based workflow (type-check, test, operational evidence) enforced via PR template.
 
 ## 🚧 Current Focus (Oct 2025)
-1. **CI/CD hardening** – finish validating `CI - Build & Test`, enable branch protection, and monitor the nightly regression workflow.
+1. **CI/CD guardrails (Phase 1 wrap‑up)** – branch protection enabled on `master` and `phase3-database-driven-form`; monitor nightly regression and keep pipelines green.
 2. **Binding write-back** parity across Technology/Triage entities using `applyBindingWrites` regression tests.
 3. **Optimistic locking UX** – surface stale draft messaging, retry flows, and autosave conflict handling.
 4. **Catalog + validator coverage** for Viability stage questions and calculated metrics; wire `scripts/util/attach-dictionary-keys.ts` into CI.
@@ -54,11 +54,9 @@ _Last updated: 2025-10-28_
 - [Implementation Guide – question revisions rollout](architecture/implementation-guide-question-revisions.md)
 
 ## 🆕 Recent Highlights (2025-10-28)
-- Added `CI - Build & Test` and `Nightly Regression` workflows (runs on `master`, `main`, `phase3-database-driven-form`) and verified the CI pipeline via workflow_dispatch.
-- Authored CI/Security runbooks (`CI_PIPELINE_SETUP.md`, `SECURITY_MONITORING.md`) and linked them from the docs index.
-- Created security checklist and updated it with GitHub Advanced Security limitations; Dependabot and weekly scans now enabled.
-- Removed the Codecov dependency from CI to simplify setup and avoid secret resolution errors for forks.
-- Logged next steps for question library rollout once the Phase 0 pilot signs off.
+- Added `CI - Build & Test`, `Nightly Regression`, and `Security Scan` workflows; removed Codecov upload; verified green runs.
+- Enabled branch protection with required `ci` status check (strict, admins included) on `master` and `phase3-database-driven-form`.
+- Configured Dependabot (manual merge policy) and authored runbooks (`CI_PIPELINE_SETUP.md`, `SECURITY_MONITORING.md`) plus `github_transition.md`.
 
 ## 📝 Documentation Rules of Thumb
 - Update this dashboard for status changes; avoid creating new `STATUS-<date>.md` files.
