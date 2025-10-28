@@ -3,7 +3,7 @@
 # Tech Triage Platform - Node.js Application
 # Following Docker best practices from official documentation
 
-ARG NODE_VERSION=18.20.4
+ARG NODE_VERSION=20.18.0
 
 # =====================================
 # Base stage for shared configuration
