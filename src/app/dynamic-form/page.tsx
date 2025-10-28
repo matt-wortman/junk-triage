@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,17 @@ function DynamicFormContent() {
 
   const techIdParam = searchParams?.get('techId');
   const techId = techIdParam && techIdParam.trim().length > 0 ? techIdParam.trim() : null;
+
+  // Memoize initial data so FormEngineProvider doesn't re-hydrate
+  // on every parent re-render (which would wipe in-progress edits).
+  const memoInitialData = useMemo(() => {
+    return initialFormData
+      ? {
+          responses: initialFormData.responses,
+          repeatGroups: initialFormData.repeatGroups,
+        }
+      : undefined;
+  }, [initialFormData]);
 
   const loadTemplateAndDraft = useCallback(async () => {
     setLoading(true);
@@ -374,10 +385,7 @@ function DynamicFormContent() {
           template={template}
           onSubmit={handleSubmit}
           onSaveDraft={handleSaveDraft}
-          initialData={initialFormData ? {
-            responses: initialFormData.responses,
-            repeatGroups: initialFormData.repeatGroups,
-          } : undefined}
+          initialData={memoInitialData}
         >
           <div className="space-y-8">
             <DynamicFormRenderer />

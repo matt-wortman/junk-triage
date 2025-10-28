@@ -58,7 +58,7 @@ We support two deployment paths. Use the lightweight incremental push for routin
      az webapp restart -g rg-eastus-hydroxyureadosing -n tech-triage-app
      ```
    - Verify `/api/health` returns `{"status":"healthy","database":"connected"}`.
-   - Reference: `docs/runbooks/deployment-runbook-2025-10-03.md` (updated with incremental steps and troubleshooting tips).
+   - Reference: `docs/guides/deployment-guide.md` (incremental steps and troubleshooting tips).
 
 2. **Full provisioning / configuration refresh**
    - Export required secrets (`POSTGRES_ADMIN`, `POSTGRES_PASSWORD`, `NEXTAUTH_SECRET`, etc.) in your shell **before** running the script if Key Vault reads are blocked.
@@ -312,6 +312,23 @@ interface FormState {
   isLoading: boolean;
   errors: Record<string, string>;
 }
+
+#### Usage note: passing `initialData` safely
+- When using `FormEngineProvider`, pass a memoized `initialData` object so the provider doesn’t rehydrate on every parent re-render.
+- Example:
+
+```tsx
+const memoInitialData = useMemo(() => initialFormData ? {
+  responses: initialFormData.responses,
+  repeatGroups: initialFormData.repeatGroups,
+} : undefined, [initialFormData]);
+
+<FormEngineProvider template={template} initialData={memoInitialData}>
+  {/* ... */}
+</FormEngineProvider>
+```
+
+- The provider also includes an internal deep-equality guard and will only rehydrate when the contents of `initialData` change. Passing `undefined` later will not clear in-progress user input.
 ```
 
 ### Data Flow
