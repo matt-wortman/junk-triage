@@ -11,14 +11,14 @@ Use this checklist to track security hardening tasks across CI/CD Phase 1. Items
 - ✅ Dependabot weekly updates for npm (`tech-triage-platform/`) and GitHub Actions (`/.github`) configured (`.github/dependabot.yml`).
 - ✅ Security scan workflow (`.github/workflows/security-scan.yml`) runs Trivy (fs/image), `npm audit`, SBOM export, and CodeQL on pushes to `main` + weekly cron.
 - ⚠️ Code scanning alerts require GitHub Advanced Security. Current repo is outside an organization, so SARIF results must be reviewed via Actions logs until licensing changes.
-- ☐ Review Dependabot auto-merge policy (decide if patch versions auto-merge).
+- ✅ Dependabot auto-merge policy decided: keep manual merges (patches reviewed, no auto-merge) to ensure regression suites run before dependency bumps land.
 
 ## 2. GitHub Security Settings
 - ✅ Enable Dependency graph (Settings → Security → Advanced Security).
 - ✅ Enable Dependabot alerts (Security tab shows status as Enabled).
 - ✅ Enable Dependabot security updates (Settings → Security → Advanced Security).
 - ⚠️ Secret scanning & Private vulnerability reporting need GitHub Advanced Security (not available for this repo); revisit if repository moves under a licensed org.
-- ☐ Enable Required status checks on `main` for CI and security workflows.
+- ✅ Enable required status checks on `master` and `phase3-database-driven-form` for `CI - Build & Test` (branch protection enabled via GitHub CLI).
 
 ## 3. Secrets & Identity (Deferred until Azure work resumes)
 - ☐ Execute Azure ↔︎ GitHub OIDC setup (`docs/runbooks/AZURE_GITHUB_OIDC_SETUP.md`) — deferred.

@@ -1,5 +1,5 @@
 # Tech Triage Platform – Project Status Dashboard
-_Last updated: 2025-10-22_
+_Last updated: 2025-10-28_
 
 ## ✅ Production Snapshot
 - Dynamic triage form runtime (Next.js 15 + Prisma) is live at **https://tech-triage-app.azurewebsites.net**.
@@ -9,12 +9,13 @@ _Last updated: 2025-10-22_
 - Evidence-based workflow (type-check, test, operational evidence) enforced via PR template.
 
 ## 🚧 Current Focus (Oct 2025)
-1. **Binding write-back** parity across Technology/Triage entities using `applyBindingWrites` regression tests.
-2. **Optimistic locking UX** – surface stale draft messaging, retry flows, and autosave conflict handling.
-3. **Catalog + validator coverage** for Viability stage questions and calculated metrics; wire `scripts/util/attach-dictionary-keys.ts` into CI.
-4. **Phase 0 (QuestionRevision + stale detection) pilot** – shadow schema, backfill, and perf validation before enabling by default.
-5. **Security hardening** – finalize Basic Auth timing-safe compare, prepare NextAuth adoption plan, and scrub hardcoded config.
-6. **Persona enablement groundwork** – authorization matrix and visibility rules ahead of Viability dashboards.
+1. **CI/CD hardening** – finish validating `CI - Build & Test`, enable branch protection, and monitor the nightly regression workflow.
+2. **Binding write-back** parity across Technology/Triage entities using `applyBindingWrites` regression tests.
+3. **Optimistic locking UX** – surface stale draft messaging, retry flows, and autosave conflict handling.
+4. **Catalog + validator coverage** for Viability stage questions and calculated metrics; wire `scripts/util/attach-dictionary-keys.ts` into CI.
+5. **Phase 0 (QuestionRevision + stale detection) pilot** – shadow schema, backfill, and perf validation before enabling by default.
+6. **Security hardening** – finalize Basic Auth timing-safe compare, prepare NextAuth adoption plan, and scrub hardcoded config.
+7. **Persona enablement groundwork** – authorization matrix and visibility rules ahead of Viability dashboards.
 
 ## 📋 Next Up (Prioritized Backlog)
 - Complete binding write-back rollout → unblock persona-aware dashboards.
@@ -52,10 +53,12 @@ _Last updated: 2025-10-22_
 - [Question Library – design overview](architecture/reusable-question-library.md)
 - [Implementation Guide – question revisions rollout](architecture/implementation-guide-question-revisions.md)
 
-## 🆕 Recent Highlights (2025-10-21)
-- Rotated Azure Postgres admin password and storage account key; App Service connection strings updated.
-- Verified production health (`/api/health`) and Prisma migrations after credential rotation.
-- Documented single-source-of-truth cleanup plan (`PROJECT_CLEANUP_PLAN_2025-10-21.md`).
+## 🆕 Recent Highlights (2025-10-28)
+- Added `CI - Build & Test` and `Nightly Regression` workflows (runs on `master`, `main`, `phase3-database-driven-form`) and verified the CI pipeline via workflow_dispatch.
+- Authored CI/Security runbooks (`CI_PIPELINE_SETUP.md`, `SECURITY_MONITORING.md`) and linked them from the docs index.
+- Created security checklist and updated it with GitHub Advanced Security limitations; Dependabot and weekly scans now enabled.
+- Removed the Codecov dependency from CI to simplify setup and avoid secret resolution errors for forks.
+- Logged next steps for question library rollout once the Phase 0 pilot signs off.
 
 ## 📝 Documentation Rules of Thumb
 - Update this dashboard for status changes; avoid creating new `STATUS-<date>.md` files.
