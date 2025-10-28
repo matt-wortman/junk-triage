@@ -6,16 +6,11 @@ on:
       - master
       - main
       - phase3-database-driven-form
-    paths:
-      - 'tech-triage-platform/**'
-      - '.github/workflows/ci.yml'
   push:
     branches:
       - master
       - main
       - phase3-database-driven-form
-    paths:
-      - 'tech-triage-platform/**'
   workflow_dispatch:
 
 concurrency:
