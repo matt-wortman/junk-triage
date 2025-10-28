@@ -54,15 +54,6 @@ jobs:
         working-directory: tech-triage-platform
         run: npm run test:coverage
 
-      - name: Upload coverage to Codecov
-        if: secrets.CODECOV_TOKEN != ''
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./tech-triage-platform/coverage/lcov.info
-          flags: unittests
-          fail_ci_if_error: false
-
       - name: Build application
         working-directory: tech-triage-platform
         run: npm run build
