@@ -49,7 +49,7 @@ Two supported flows:
    curl -s https://tech-triage-app.azurewebsites.net/api/health
    ```
    Expected response: `{ "status": "healthy", "database": "connected" }`.
-4. Log the run in `docs/runbooks/deployment-runbook-2025-10-03.md` (updated with incremental steps, timestamps, and troubleshooting notes).
+4. Log the run in `docs/guides/deployment-guide.md` (incremental steps, timestamps, and troubleshooting notes).
 
 ### 4.2 Full provisioning / configuration refresh
 Use `scripts/deploy-to-azure.sh` when infrastructure (Postgres, App Service plan, settings) needs to be created or re-synced.
