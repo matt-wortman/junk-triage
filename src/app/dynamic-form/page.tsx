@@ -196,7 +196,9 @@ function DynamicFormContent() {
     options?: { silent?: boolean }
   ) => {
     const logger = getClientLogger();
-    logger.info('Saving draft');
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info('Saving draft');
+    }
 
     if (isSavingDraft) return; // Prevent multiple save operations
 
