@@ -36,30 +36,24 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: tech-triage-platform/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: tech-triage-platform
         run: npm ci
 
       - name: Type checking
-        working-directory: tech-triage-platform
         run: npm run type-check
 
       - name: Linting
-        working-directory: tech-triage-platform
         run: npm run lint
 
       - name: Run tests
-        working-directory: tech-triage-platform
         run: npm run test:coverage
 
       - name: Build application
-        working-directory: tech-triage-platform
         run: npm run build
 
       - name: Build Docker image (test)
-        working-directory: tech-triage-platform
         run: |
           docker build \
             --build-arg NODE_VERSION=18.20.4 \
