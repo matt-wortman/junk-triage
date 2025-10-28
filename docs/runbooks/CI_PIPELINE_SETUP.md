@@ -12,11 +12,11 @@ Use this runbook to configure and operate the Tech Triage Platform CI workflows 
 3. Keep **Allow GitHub Actions to create and approve pull requests** disabled unless a future automation requires it.
 4. Save the settings.
 
-## 2. Configure the Codecov Token (optional)
-1. If you use [Codecov](https://app.codecov.io/), sign in and locate the repository token under **Settings → Access → Upload token**.
-2. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret** and create `CODECOV_TOKEN` with that value.
-3. The `ci.yml` workflow will automatically upload `coverage/lcov.info` when this secret is present.
-4. **If you are not using Codecov:** leave the secret unset. The upload step is guarded by `if: secrets.CODECOV_TOKEN != ''`, so it will simply skip. You can also delete or comment out the `Upload coverage to Codecov` step in `.github/workflows/ci.yml` if you prefer to remove it entirely.
+## 2. Optional: Re-enable Codecov Uploads (only if needed)
+1. By default, the `CI - Build & Test` workflow no longer attempts a Codecov upload. If you want coverage reports in Codecov, restore the upload step in `.github/workflows/ci.yml` (see commit history for the block that was removed on 2025-10-28).
+2. In Codecov, locate the repository token under **Settings → Access → Upload token**.
+3. In GitHub, open **Settings → Secrets and variables → Actions → New repository secret** and create `CODECOV_TOKEN` with that value.
+4. Reference the secret in the restored upload step (`token: ${{ secrets.CODECOV_TOKEN }}`) so the action can authenticate.
 
 ## 3. Nightly Regression Workflow
 - File: `.github/workflows/nightly-regression.yml`
@@ -50,3 +50,4 @@ Capture the command output in Jira or the status log when escalating issues.
 
 ## Change Log
 - **2025-10-28:** Initial version documenting workflow permissions, Codecov setup, nightly regression job, and branch protection guidance.
+- **2025-10-28:** Updated to note that Codecov uploads are disabled by default; instructions now cover how to re-enable the step if desired.

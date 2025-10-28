@@ -29,9 +29,10 @@
 - Created `docs/runbooks/CI_PIPELINE_SETUP.md` with step-by-step guidance for setting workflow permissions to read/write, configuring the `CODECOV_TOKEN` secret, enabling branch protection, and running the optional regression suites locally; linked the runbook from `docs/README.md`.
 - Added `.github/workflows/nightly-regression.yml` to execute the performance and validation regression suites nightly (`RUN_PERFORMANCE_TESTS` / `RUN_VALIDATION_FAILURE_TESTS`) and publish coverage artifacts for follow-up.
 - Updated `docs/runbooks/SECURITY_MONITORING.md` to accurately reflect the current GitHub Advanced Security limitations (secret scanning, private vulnerability reporting, and dashboard visibility remain gated).
+- Removed the Codecov upload step from the CI workflow to avoid secret resolution errors for forks and documented how to re-enable it if coverage publishing is needed.
 
 ### Next
-- In GitHub UI, switch Actions workflow permissions to **Read and write**, add the `CODECOV_TOKEN` secret, and validate that the CI PR comment succeeds before merging.
+- In GitHub UI, confirm Actions workflow permissions remain **Read and write** and re-run the CI workflow to verify the PR comment step succeeds now that Codecov uploads are disabled.
 - Monitor the `Nightly Regression` workflow outcomes and decide whether to elevate the optional suites into required CI checks.
 - Enable branch protection on `main` to require the `CI - Build & Test` workflow (and optionally `Nightly Regression`) once the runs are consistently green.
 - Continue exploring alternatives for surfacing Trivy/CodeQL results without GitHub Advanced Security dashboards; document findings or migration path if licensing changes.
