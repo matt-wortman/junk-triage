@@ -26,6 +26,9 @@
   "prisma": {
     "seed": "tsx prisma/seed/index.ts"
   },
+  "engines": {
+    "node": ">=20.18.0 <21"
+  },
   "dependencies": {
     "@azure/storage-blob": "^12.24.0",
     "@hookform/resolvers": "^5.2.2",
