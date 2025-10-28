@@ -30,6 +30,7 @@
 - Added `.github/workflows/nightly-regression.yml` to execute the performance and validation regression suites nightly (`RUN_PERFORMANCE_TESTS` / `RUN_VALIDATION_FAILURE_TESTS`) and publish coverage artifacts for follow-up.
 - Updated `docs/runbooks/SECURITY_MONITORING.md` to accurately reflect the current GitHub Advanced Security limitations (secret scanning, private vulnerability reporting, and dashboard visibility remain gated).
 - Removed the Codecov upload step from the CI workflow to avoid secret resolution errors for forks and documented how to re-enable it if coverage publishing is needed.
+- Expanded the CI workflow triggers to run on pushes/PRs targeting `master`, `main`, and `phase3-database-driven-form`, and added `workflow_dispatch` for manual runs from the Actions UI.
 
 ### Next
 - In GitHub UI, confirm Actions workflow permissions remain **Read and write** and re-run the CI workflow to verify the PR comment step succeeds now that Codecov uploads are disabled.
