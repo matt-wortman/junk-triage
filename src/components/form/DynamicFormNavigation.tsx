@@ -378,7 +378,9 @@ export function DynamicFormNavigation({
     try {
       setAutosaveStatus('saving');
       if (onSaveDraft) {
-        getClientLogger().info('Saving draft', { hasResponses: hasResponseValues(responses, repeatGroups) });
+        if (process.env.NODE_ENV !== 'production') {
+          getClientLogger().info('Saving draft', { hasResponses: hasResponseValues(responses, repeatGroups) });
+        }
         await Promise.resolve(onSaveDraft(formData, { silent: false }));
       } else {
         await saveDraft();
