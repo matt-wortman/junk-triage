@@ -56,7 +56,7 @@ jobs:
       - name: Build Docker image (test)
         run: |
           docker build \
-            --build-arg NODE_VERSION=18.20.4 \
+            --build-arg NODE_VERSION=20.18.0 \
             --target final \
             -t tech-triage:ci-test .
 
