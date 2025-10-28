@@ -16,6 +16,8 @@ EXPOSE 3000
 # Dependencies stage - install packages
 # =====================================
 FROM base AS deps
+# Avoid @prisma/client postinstall generate in this thin deps layer
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 # Install dependencies separately to keep build caching efficient without BuildKit
 COPY package.json package-lock.json ./
 RUN npm ci --include=dev
@@ -36,6 +38,7 @@ RUN npm run build
 # Production dependencies
 # =====================================
 FROM base AS prod-deps
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
